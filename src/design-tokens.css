@@ -1,0 +1,40 @@
+/* Vire — Midnight Canvas Design Tokens */
+/* Hyperstudio × Monopo Saigon synthesis */
+
+:root {
+  /* ── Canvas ── */
+  --color-canvas: #101010;
+  --color-surface: #1a1a1a;
+  --color-surface-elevated: #242424;
+  --color-border: #2a2a2a;
+  --color-divider: #1f1f1f;
+
+  /* ── Text ── */
+  --color-text-primary: #f3f3f3;
+  --color-text-secondary: #949494;
+  --color-text-muted: #6b6b6b;
+  --color-text-inverse: #101010;
+
+  /* ── Accent (one per viewport) ── */
+  --color-accent: #e7c59a;
+  --color-accent-hover: #f0d4b0;
+
+  /* ── Typography ── */
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
+
+  /* ── Radius (three treatments only) ── */
+  --radius-none: 0;
+  --radius-control: 8px;
+  --radius-pill: 99px;
+
+  /* ── Spacing (4px base) ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-10: 40px;
+  --space-section: 120px;
+}
