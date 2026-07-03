@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vire — Free Canvas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* ── Canvas (dark field, Monopo-style negative space) ── */
+  body {
+    background: #101010;
+    font-family: 'Inter', system-ui, sans-serif;
+    overflow: hidden; height: 100vh;
+    /* ponytail: subtle grain via radial, no image asset */
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.015) 0%, transparent 55%),
+      radial-gradient(ellipse at 70% 80%, rgba(231,197,154,0.02) 0%, transparent 50%),
+      #101010;
+  }
+
+  /* ── Top bar — Monopo ghost nav ── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 44px; padding: 0 24px;
+    backdrop-filter: blur(12px);
+    background: rgba(16,16,16,0.85);
+  }
+  .topbar-l { display: flex; align-items: center; gap: 16px; }
+  .topbar-r { display: flex; align-items: center; gap: 8px; }
+  .logo {
+    font-size: 14px; font-weight: 400; letter-spacing: 0.02em;
+    color: #ffffff;
+  }
+  .badge {
+    font-size: 9px; font-family: 'JetBrains Mono', monospace;
+    color: #808080;
+    border: 1px solid #333; border-radius: 75px; padding: 2px 10px;
+  }
+  .proj-tab {
+    font-size: 12px; font-weight: 400; color: #808080;
+    padding: 4px 0; cursor: default;
+    border-bottom: 1px solid transparent;
+  }
+  .proj-tab.active {
+    color: #ffffff;
+    border-bottom-color: #ffffff;
+  }
+  .dot { display: inline-block; width: 5px; height: 5px; border-radius: 99px; background: #e7c59a; margin-left: 2px; vertical-align: middle; }
+
+  /* ── Canvas area ── */
+  .canvas {
+    width: 100%; height: calc(100vh - 44px);
+    position: relative; overflow: hidden;
+  }
+
+  /* ── Free-floating block (terminal/agent/note) ── */
+  .block {
+    position: absolute;
+    background: #242424;
+    color: #d4d4d4;
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .block-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid #333;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: #6b6b6b;
+    background: #242424;
+  }
+  .block-header-l { display: flex; align-items: center; gap: 6px; }
+  .block-header .dot { width: 6px; height: 6px; background: #4a4a4a; }
+  .block-header .dot.live { background: #6b6b6b; }
+  .block-close { color: #555; font-size: 12px; cursor: default; }
+
+  /* ── Terminal block ── */
+  .term-body {
+    padding: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 1.65;
+    color: #d4d4d4;
+    background: #1a1a1a;
+    min-height: 60px;
+    max-height: 240px;
+  }
+  .term-body .prompt { color: #e7c59a; }
+  .term-body .cmd { color: #f3f3f3; }
+  .term-body .output { color: #6b6b6b; }
+  .term-body .cursor {
+    display: inline-block; width: 7px; height: 13px;
+    background: #e7c59a; vertical-align: text-bottom;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── Agent block ── */
+  .agent-body {
+    padding: 14px; font-size: 12px; line-height: 1.55;
+    color: #949494; background: #242424;
+    min-width: 240px; max-width: 280px;
+    max-height: 220px;
+  }
+  .agent-body .user { color: #f3f3f3; font-weight: 500; }
+  .agent-body .ai  { color: #f3f3f3; }
+  .agent-body .tool { color: #6b6b6b; font-size: 10px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Note block ── */
+  .note-body {
+    padding: 14px; font-size: 12px; line-height: 1.55;
+    color: #949494; background: #242424;
+    min-width: 180px; max-width: 220px;
+    max-height: 160px;
+  }
+
+  /* ── Pill button (Monopo style) ── */
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 75px;
+    font-size: 10px; font-family: 'Inter', sans-serif; font-weight: 400;
+    border: 1px solid #333; color: #6b6b6b;
+    cursor: default; background: #242424;
+  }
+  .pill:hover { border-color: #555; color: #d4d4d4; }
+
+  /* ── Project label (Monopo-style floating text) ── */
+  .project-label {
+    position: absolute;
+    font-size: 120px; font-weight: 100;
+    color: rgba(255,255,255,0.07);
+    letter-spacing: -0.02em;
+    pointer-events: none; user-select: none;
+  }
+
+  /* ── Connector line (ponytail: CSS-only, no SVG) ── */
+  .connector {
+    position: absolute;
+    pointer-events: none; z-index: -10;
+  }
+  .connector::before {
+    content: ''; display: block;
+    border-left: 1px dashed #333;
+    height: 32px; margin-left: 4px;
+  }
+
+  /* ── Mini-map ── */
+  .minimap {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 148px; background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 0; padding: 8px; z-index: 10;
+  }
+  .minimap-label {
+    font-size: 8px; font-family: 'JetBrains Mono', monospace;
+    color: #6b6b6b; text-transform: uppercase; letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .minimap-field {
+    width: 100%; height: 64px; position: relative;
+  }
+  .minimap-dot {
+    position: absolute; width: 6px; height: 4px;
+    background: rgba(255,255,255,0.2); border-radius: 1px;
+  }
+
+  /* ── Floating toolbar ── */
+  .toolbar {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 0;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 75px; padding: 3px; z-index: 10;
+  }
+  .tb-btn {
+    width: 34px; height: 34px; border-radius: 75px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: default; color: #808080; font-size: 13px;
+    transition: background 0.15s;
+  }
+  .tb-btn.active { background: rgba(255,255,255,0.15); color: #e7c59a; }
+
+  /* ── Grid hint (ponytail: subtle, 80px spacing) ── */
+  .canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+    background-size: 80px 80px;
+    pointer-events: none; z-index: -5;
+  }
+
+  /* ── Positions ── */
+  .b-term1  { top: 80px; left: 80px; width: 380px; }
+  .b-term2  { top: 80px; left: 476px; width: 340px; }
+  .b-agent  { top: 96px; left: 832px; width: 280px; }
+  .b-note   { top: 300px; left: 80px; width: 220px; }
+  .b-term3  { top: 420px; left: 260px; width: 340px; opacity: 0.45; }
+  .b-agent2 { top: 440px; left: 620px; width: 260px; opacity: 0.35; }
+  .label-a  { top: 40px; left: 70px; }
+  .label-h  { top: 410px; left: 250px; font-size: 120px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-l">
+    <span class="logo">Vire</span>
+    <span class="badge">β</span>
+  </div>
+  <div class="topbar-l">
+    <span class="proj-tab active">aurora<span class="dot"></span></span>
+    <span class="proj-tab">hermes-core</span>
+    <span class="proj-tab">frontend-v1</span>
+  </div>
+  <div class="topbar-r">
+    <span class="proj-tab">+ new</span>
+  </div>
+</div>
+
+<div class="canvas">
+
+  <!-- Project label (ambient) -->
+  <div class="project-label label-a">aurora</div>
+
+  <!-- Terminal 1 — zsh -->
+  <div class="block b-term1">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span class="dot live"></span>
+        <span>zsh · aurora</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span class="pill">+ term</span>
+        <span class="block-close">✕</span>
+      </div>
+    </div>
+    <div class="term-body">
+      <div><span class="prompt">➜</span> <span class="cmd">git status</span></div>
+      <div class="output">On branch main · clean</div>
+      <div style="margin-top:6px;"><span class="prompt">➜</span> <span class="cmd">cargo build</span></div>
+      <div class="output">Compiling aurora v0.2.1 · Finished in 2.3s</div>
+      <div style="margin-top:6px;"><span class="prompt">➜</span> <span class="cursor"></span></div>
+    </div>
+  </div>
+
+  <!-- Terminal 2 — logs -->
+  <div class="block b-term2">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span class="dot live"></span>
+        <span>logs · aurora</span>
+      </div>
+      <span class="block-close">✕</span>
+    </div>
+    <div class="term-body">
+      <div class="output">12:34:21  GET /api/users → 200  12ms</div>
+      <div class="output">12:34:23  POST /api/auth → 201  45ms</div>
+      <div class="output">12:34:25  <span style="color:#e7c59a;">WARN</span>  rate limit 87/100</div>
+      <div class="output">12:34:30  agent: refactor-auth → done</div>
+    </div>
+  </div>
+
+  <!-- Agent block -->
+  <div class="block b-agent">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span class="dot live"></span>
+        <span>Claude Code · aurora</span>
+      </div>
+      <span class="block-close">✕</span>
+    </div>
+    <div class="agent-body">
+      <span class="user">refactor auth to Argon2</span><br><br>
+      <span class="ai">Running analysis…</span><br><br>
+      <span class="tool">▶ read_file(auth.rs)<br>▶ search("password_hash")<br>▶ patch(auth.rs, L42)</span><br><br>
+      <span class="ai">Done. 3 files changed.</span>
+      &nbsp;<span class="pill" style="font-size:9px;">commit?</span>
+    </div>
+  </div>
+
+  <!-- Note block -->
+  <div class="block b-note">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span>📄 decisions</span>
+      </div>
+      <span class="block-close">✕</span>
+    </div>
+    <div class="note-body">
+      <strong>Auth:</strong> migrate bcrypt → Argon2id<br>
+      <strong>DB:</strong> use SQLite for local, pg for prod<br>
+      <strong>API:</strong> GraphQL over REST for agent access
+    </div>
+  </div>
+
+  <!-- ── hermes-core project (dimmed, in background) ── -->
+  <div class="project-label label-h">hermes-core</div>
+
+  <div class="block b-term3">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span class="dot"></span>
+        <span>zsh · hermes</span>
+      </div>
+      <span class="block-close">✕</span>
+    </div>
+    <div class="term-body" style="font-size:10px;">
+      <div class="output">cron: memory_compaction → done</div>
+      <div class="output">delegate(architect, P1) → running</div>
+    </div>
+  </div>
+
+  <div class="block b-agent2">
+    <div class="block-header">
+      <div class="block-header-l">
+        <span class="dot"></span>
+        <span>OpenCode · hermes</span>
+      </div>
+      <span class="block-close">✕</span>
+    </div>
+    <div class="agent-body" style="font-size:11px;">
+      <span class="tool">▶ task: audit SOUL.md</span><br>
+      <span class="tool">▶ scanning 14 files…</span>
+    </div>
+  </div>
+
+  <!-- Mini-map -->
+  <div class="minimap">
+    <div class="minimap-label">canvas</div>
+    <div class="minimap-field">
+      <div class="minimap-dot" style="top:10px;left:8px;width:32px;"></div>
+      <div class="minimap-dot" style="top:12px;left:46px;width:28px;"></div>
+      <div class="minimap-dot" style="top:14px;left:80px;width:20px;"></div>
+      <div class="minimap-dot" style="top:30px;left:12px;width:18px;"></div>
+      <div class="minimap-dot" style="top:36px;left:36px;width:26px;opacity:0.5;"></div>
+      <div class="minimap-dot" style="top:40px;left:73px;width:18px;opacity:0.4;"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="tb-btn active" title="Move">↕</div>
+    <div class="tb-btn" title="Terminal">▸</div>
+    <div class="tb-btn" title="Agent">◈</div>
+    <div class="tb-btn" title="Note">¶</div>
+    <div class="tb-btn" title="Browser">◐</div>
+  </div>
+
+</div>
+
+</body>
+</html>
