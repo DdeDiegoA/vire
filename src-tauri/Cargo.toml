@@ -1,6 +1,6 @@
 [package]
 name = "vire"
-version = "0.1.0"
+version = "0.0.0"
 description = "Vire — Infinite Canvas Workspace"
 authors = ["Diego Arenas"]
 license = "MIT"
@@ -24,7 +24,3 @@ log = "0.4"
 tauri = { version = "2.11.3" }
 tauri-plugin-log = "2"
 libghostty-vt = "0.2"
-
-[dependencies.libghostty-vt-sys]
-version = "0.2"
-optional = true

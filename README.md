@@ -1,32 +1,62 @@
-# React + TypeScript + Vite
+# Vire
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Infinite canvas workspace para desarrollo con IA. Terminales Ghostty + agentes IA + herramientas en bloques flotantes sobre un canvas infinito.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+| Capa | Tecnología |
+|------|-----------|
+| Backend | Rust (Tauri v2) |
+| Frontend | React 19 + TypeScript + Vite |
+| Canvas | tldraw SDK |
+| Terminal | libghostty-rs (GHOSTTY_SOURCE_DIR + Zig 0.15.x) |
+| Build | Vite + Tauri CLI |
 
-## React Compiler
+## Requisitos
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Rust toolchain (rustc 1.77+)
+- Node.js 24.18 (ver `.nvmrc`)
+- macOS (Tauri targets `dmg`/`app`)
+- Zig 0.15.x en PATH (solo para libghostty)
 
-## Expanding the Oxlint configuration
+## Desarrollo
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install            # frontend deps
+npm run dev           # frontend dev server (Vite)
+npm run tauri dev     # app completa (frontend + Tauri backend)
+npm run build         # frontend build
+npm run lint          # oxlint
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## Estructura
+
+```
+vire/
+├── src/                  # Frontend (React + tldraw)
+│   ├── App.tsx           # Canvas principal
+│   ├── design-tokens.css # Design system
+│   └── main.tsx          # Entry point
+├── src-tauri/            # Backend (Rust)
+│   ├── src/
+│   │   ├── lib.rs        # Entry Tauri
+│   │   ├── terminal/     # Integración libghostty
+│   │   ├── process/      # Gestión de procesos
+│   │   ├── project/      # Persistencia workspace
+│   │   └── ipc/          # Comandos Tauri
+│   └── tauri.conf.json
+├── .nvmrc
+└── package.json
+```
+
+## Fases
+
+- **Fase 0** ✅ — Scaffold Tauri + tldraw + módulos Rust
+- **Fase 1** — Canvas y UI core (custom shapes, toolbar, bloques)
+- **Fase 2** — Terminal engine (libghostty, streaming)
+- **Fase 3** — Persistencia (SQLite, layout)
+- **Fase 4** — CI/CD + DX
+
+## Licencia
+
+MIT
