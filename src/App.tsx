@@ -1,13 +1,14 @@
-import { Tldraw } from 'tldraw'
-import 'tldraw/tldraw.css'
 import './design-tokens.css'
+import { VireTopbar } from './ui/VireTopbar'
+import { VireToolbar } from './ui/VireToolbar'
+import { VireCanvas } from './canvas/VireCanvas'
 
 function App() {
   return (
     <div className="vire-canvas">
-      <Tldraw
-        persistenceKey="vire"
-      />
+      <VireTopbar />
+      <VireCanvas />
+      <VireToolbar />
     </div>
   )
 }

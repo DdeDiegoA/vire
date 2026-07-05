@@ -19,14 +19,26 @@
   --color-accent: #e7c59a;
   --color-accent-hover: #f0d4b0;
 
+  /* ── Syntax (solo output de terminal — nunca UI chrome) ── */
+  --color-err: #fc618d;
+  --color-ok: #7bd88f;
+  --color-warn: #f8e67a;
+  --color-path: #948ae3;
+
   /* ── Typography ── */
   --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Cascadia Code', monospace;
 
-  /* ── Radius (three treatments only) ── */
+  /* ── Radius ── */
   --radius-none: 0;
+  --radius-sm: 4px;
   --radius-control: 8px;
+  --radius-block: 12px;
   --radius-pill: 99px;
+
+  /* ── Grid overlay (canvas background) ── */
+  --grid-size: 40px;
+  --grid-opacity: 0.035;
 
   /* ── Spacing (4px base) ── */
   --space-1: 4px;
