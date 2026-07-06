@@ -10,6 +10,18 @@ import { BrowserBlock, type BrowserData } from '../shapes/blocks/BrowserBlock'
 const MIN_W = 160
 const MIN_H = 120
 
+// preventDefault on pointerdown stops WebKit from anchoring a native text
+// selection before this runs; the body toggle is belt-and-suspenders for any
+// selection that starts elsewhere mid-drag. -webkit- prefix kept for older WKWebView.
+function disableTextSelection() {
+  document.body.style.userSelect = 'none'
+  ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
+}
+function enableTextSelection() {
+  document.body.style.userSelect = ''
+  ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = ''
+}
+
 export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) {
   const selectedBlockId = useVireStore((s) => s.selectedBlockId)
   const selectBlock = useVireStore((s) => s.selectBlock)
@@ -28,7 +40,9 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
 
   const onHeaderPointerDown: React.PointerEventHandler = (e) => {
     e.stopPropagation()
+    e.preventDefault()
     dragRef.current = { startX: e.clientX, startY: e.clientY, blockX: block.x, blockY: block.y }
+    disableTextSelection()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
@@ -43,11 +57,14 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
 
   const onHeaderPointerUp: React.PointerEventHandler = () => {
     dragRef.current = null
+    enableTextSelection()
   }
 
   const onResizePointerDown: React.PointerEventHandler = (e) => {
     e.stopPropagation()
+    e.preventDefault()
     resizeRef.current = { startX: e.clientX, startY: e.clientY, w: block.w, h: block.h }
+    disableTextSelection()
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
   }
 
@@ -62,6 +79,7 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
 
   const onResizePointerUp: React.PointerEventHandler = () => {
     resizeRef.current = null
+    enableTextSelection()
   }
 
   return (
