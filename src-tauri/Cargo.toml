@@ -25,6 +25,7 @@ tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 vt100 = "0.15"
 portable-pty = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
 # ponytail: vt100 (pure VT parser/grid, no PTY) + portable-pty (cross-OS PTY,
 # wezterm's crate) instead of alacritty_terminal — alacritty_terminal 0.24.2's
 # bundled PTY layer (rustix-openpty) has its own broken internal dependency

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Channel, invoke } from '@tauri-apps/api/core'
+import { useVireStore } from '../../store/useVireStore'
 
 const FONT = "11px 'JetBrains Mono', 'Cascadia Code', monospace"
 const CELL_W = 6.6
@@ -106,6 +107,7 @@ function keyToBytes(e: React.KeyboardEvent): Uint8Array | null {
 export function TerminalBlock({ id }: { id: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const projectId = useVireStore((s) => s.activeId)
 
   useEffect(() => {
     const channel = new Channel<TermFrame>()
@@ -129,6 +131,7 @@ export function TerminalBlock({ id }: { id: string }) {
         size = next
         invoke('create_terminal', {
           surfaceId: id,
+          projectId,
           cols: next.cols,
           rows: next.rows,
           onFrame: channel,

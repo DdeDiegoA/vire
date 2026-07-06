@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { defaultDataByType, nameByType, type VireBlockType } from '../shapes/blockTypes'
+import { createTauriStorage } from './tauriStorage'
 
 export interface VireProject {
   id: string
@@ -25,16 +26,16 @@ export interface Camera {
   z: number
 }
 
-interface Board {
+export interface Board {
   blocks: VireBlock[]
   camera: Camera
   seq: number
   topZ: number
 }
 
-const defaultCamera: Camera = { x: 0, y: 0, z: 1 }
+export const defaultCamera: Camera = { x: 0, y: 0, z: 1 }
 
-function emptyBoard(): Board {
+export function emptyBoard(): Board {
   return { blocks: [], camera: { ...defaultCamera }, seq: 0, topZ: 0 }
 }
 
@@ -191,6 +192,7 @@ export const useVireStore = create<VireStore>()(
     {
       name: 'vire-boards',
       version: 1,
+      storage: createTauriStorage(),
       // v0 boards predate the z/topZ fields; backfill so stacking order isn't NaN.
       migrate: (persisted, version) => {
         const state = persisted as VireStore

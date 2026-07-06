@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useActiveBoard, useVireStore, type Camera, type VireBlock } from '../store/useVireStore'
 import { VireWindow } from './VireWindow'
 import { VireContextMenu } from './VireContextMenu'
+import { SettingsPanel } from '../components/SettingsPanel'
 import type { VireBlockType } from '../shapes/blockTypes'
 
 const ZOOM_MIN = 0.2
@@ -120,6 +121,7 @@ export function VireCanvas() {
   const { camera, blocks } = board
 
   const [menu, setMenu] = useState<MenuState | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const panRef = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null)
 
   const toWorld = (screenX: number, screenY: number) => ({
@@ -229,6 +231,27 @@ export function VireCanvas() {
       )}
       <ZoomIndicator zoom={camera.z} onReset={() => setCamera({ ...camera, z: 1 })} />
       <MiniMap camera={camera} blocks={blocks} />
+      <button
+        onClick={() => setSettingsOpen((v) => !v)}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Config AI CLIs"
+        style={{
+          position: 'absolute',
+          top: 16,
+          right: 16,
+          zIndex: 150,
+          background: 'var(--color-surface-elevated)',
+          border: '1px solid var(--color-divider)',
+          borderRadius: 'var(--radius-pill)',
+          color: 'var(--color-text-secondary)',
+          fontSize: 13,
+          padding: '4px 10px',
+          cursor: 'pointer',
+        }}
+      >
+        ⚙
+      </button>
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }
