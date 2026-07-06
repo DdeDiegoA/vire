@@ -2,7 +2,10 @@ import { useRef } from 'react'
 import { useVireStore, type VireBlock } from '../store/useVireStore'
 import { PomodoroBlock, type PomodoroData } from '../shapes/blocks/PomodoroBlock'
 import { TaskListBlock, type TaskListData } from '../shapes/blocks/TaskListBlock'
-import { TerminalPreview, AgentPreview, NotePreview, BrowserPreview } from '../shapes/blocks/StaticPreviews'
+import { AgentPreview } from '../shapes/blocks/StaticPreviews'
+import { TerminalBlock } from '../shapes/blocks/TerminalBlock'
+import { NoteBlock, type NoteData } from '../shapes/blocks/NoteBlock'
+import { BrowserBlock, type BrowserData } from '../shapes/blocks/BrowserBlock'
 
 const MIN_W = 160
 const MIN_H = 120
@@ -122,10 +125,10 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
       <div style={{ flex: 1, overflow: 'auto' }}>
         {block.type === 'pomodoro' && <PomodoroBlock id={block.id} data={block.data as PomodoroData} />}
         {block.type === 'tasklist' && <TaskListBlock id={block.id} data={block.data as TaskListData} />}
-        {block.type === 'terminal' && <TerminalPreview />}
+        {block.type === 'terminal' && <TerminalBlock id={block.id} />}
         {block.type === 'agent' && <AgentPreview />}
-        {block.type === 'note' && <NotePreview />}
-        {block.type === 'browser' && <BrowserPreview />}
+        {block.type === 'note' && <NoteBlock id={block.id} data={block.data as NoteData} />}
+        {block.type === 'browser' && <BrowserBlock id={block.id} data={block.data as BrowserData} />}
       </div>
 
       <div

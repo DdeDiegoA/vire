@@ -23,7 +23,24 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
-# ponytail: libghostty-vt removido — terminal streaming es Fase 2,
-# y zig 0.15.2 no linkea en macOS 26. Cuando se implemente terminal
-# real, habrá que resolver zig 0.16.0 + ghostty source.
-# libghostty-vt = "0.2"
+vt100 = "0.15"
+portable-pty = "0.8"
+# ponytail: vt100 (pure VT parser/grid, no PTY) + portable-pty (cross-OS PTY,
+# wezterm's crate) instead of alacritty_terminal — alacritty_terminal 0.24.2's
+# bundled PTY layer (rustix-openpty) has its own broken internal dependency
+# resolution (two incompatible rustix majors, AsFd trait mismatch inside the
+# crate itself) unrelated to Vire's code. vt100+portable-pty is the smaller,
+# cleanly-resolving pairing for the same job.
+# DECISION (2026-07-05): libghostty-vt evaluated and rejected for now — its
+# build.zig requires exactly zig 0.15.2, but zig 0.15.2's own compiler fails
+# to link natively on macOS 26 (Tahoe): "undefined symbol: _abort" etc. even
+# for a trivial `zig build` hello-world, unrelated to ghostty. zig 0.16.0
+# fixes that native-link bug, but ghostty's build.zig (pinned commit, v1.3.1,
+# and `tip`) hard-rejects any zig != 0.15.2 via `requireZig`/@compileError and
+# uses APIs zig 0.16 removed (File.reader()/Dir.readFileAlloc() signatures
+# changed). No zig release exists between 0.15.2 and 0.16.0. Verified with:
+# official ziglang.org 0.15.2, Homebrew zig@0.15, Homebrew zig 0.16.0, ghostty
+# pinned commit, ghostty v1.3.1 tag, ghostty tip branch — all combinations
+# fail. This is an upstream toolchain incompatibility, not a Vire config
+# issue. Revisit when zig patches macOS 26 native linking in a 0.15.x point
+# release, or ghostty relaxes its exact-version pin to allow 0.16+.

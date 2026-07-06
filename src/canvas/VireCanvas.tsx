@@ -1,11 +1,109 @@
 import { useRef, useState } from 'react'
-import { useActiveBoard, useVireStore } from '../store/useVireStore'
+import { useActiveBoard, useVireStore, type Camera, type VireBlock } from '../store/useVireStore'
 import { VireWindow } from './VireWindow'
 import { VireContextMenu } from './VireContextMenu'
 import type { VireBlockType } from '../shapes/blockTypes'
 
 const ZOOM_MIN = 0.2
 const ZOOM_MAX = 3
+
+const MINIMAP_W = 180
+const MINIMAP_H = 120
+const MINIMAP_PAD = 60
+
+function ZoomIndicator({ zoom, onReset }: { zoom: number; onReset: () => void }) {
+  return (
+    <button
+      onClick={onReset}
+      title="Restablecer zoom (100%)"
+      style={{
+        position: 'absolute',
+        left: 16,
+        bottom: 16,
+        zIndex: 150,
+        background: 'var(--color-surface-elevated)',
+        border: '1px solid var(--color-divider)',
+        borderRadius: 'var(--radius-pill)',
+        color: 'var(--color-text-secondary)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 11,
+        padding: '4px 10px',
+        cursor: 'pointer',
+      }}
+    >
+      {Math.round(zoom * 100)}%
+    </button>
+  )
+}
+
+function MiniMap({ camera, blocks }: { camera: Camera; blocks: VireBlock[] }) {
+  const viewport = {
+    x1: -camera.x / camera.z,
+    y1: -camera.y / camera.z,
+    x2: (window.innerWidth - camera.x) / camera.z,
+    y2: (window.innerHeight - camera.y) / camera.z,
+  }
+
+  const xs = blocks.flatMap((b) => [b.x, b.x + b.w]).concat(viewport.x1, viewport.x2)
+  const ys = blocks.flatMap((b) => [b.y, b.y + b.h]).concat(viewport.y1, viewport.y2)
+  const minX = Math.min(...xs) - MINIMAP_PAD
+  const maxX = Math.max(...xs) + MINIMAP_PAD
+  const minY = Math.min(...ys) - MINIMAP_PAD
+  const maxY = Math.max(...ys) + MINIMAP_PAD
+  const scale = Math.min(MINIMAP_W / (maxX - minX), MINIMAP_H / (maxY - minY))
+
+  const toMap = (x: number, y: number) => ({ x: (x - minX) * scale, y: (y - minY) * scale })
+  const vp1 = toMap(viewport.x1, viewport.y1)
+  const vp2 = toMap(viewport.x2, viewport.y2)
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        right: 16,
+        bottom: 16,
+        width: MINIMAP_W,
+        height: MINIMAP_H,
+        zIndex: 150,
+        background: 'var(--color-surface-elevated)',
+        border: '1px solid var(--color-divider)',
+        borderRadius: 'var(--radius-control)',
+        overflow: 'hidden',
+      }}
+    >
+      {blocks.map((b) => {
+        const p1 = toMap(b.x, b.y)
+        const p2 = toMap(b.x + b.w, b.y + b.h)
+        return (
+          <div
+            key={b.id}
+            style={{
+              position: 'absolute',
+              left: p1.x,
+              top: p1.y,
+              width: Math.max(2, p2.x - p1.x),
+              height: Math.max(2, p2.y - p1.y),
+              background: 'var(--color-accent)',
+              opacity: 0.6,
+              borderRadius: 2,
+            }}
+          />
+        )
+      })}
+      <div
+        style={{
+          position: 'absolute',
+          left: vp1.x,
+          top: vp1.y,
+          width: Math.max(0, vp2.x - vp1.x),
+          height: Math.max(0, vp2.y - vp1.y),
+          border: '1px solid var(--color-text-primary)',
+          pointerEvents: 'none',
+        }}
+      />
+    </div>
+  )
+}
 
 interface MenuState {
   screenX: number
@@ -129,6 +227,8 @@ export function VireCanvas() {
       {menu && (
         <VireContextMenu x={menu.screenX} y={menu.screenY} onSelect={handleCreate} onClose={() => setMenu(null)} />
       )}
+      <ZoomIndicator zoom={camera.z} onReset={() => setCamera({ ...camera, z: 1 })} />
+      <MiniMap camera={camera} blocks={blocks} />
     </div>
   )
 }

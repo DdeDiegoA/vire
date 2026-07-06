@@ -1,6 +1,13 @@
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .manage(process::ProcessManager::default())
+    .invoke_handler(tauri::generate_handler![
+      ipc::create_terminal,
+      ipc::terminal_input,
+      ipc::resize_terminal,
+      ipc::close_terminal,
+    ])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
