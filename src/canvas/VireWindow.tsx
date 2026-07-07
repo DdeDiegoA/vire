@@ -1,11 +1,13 @@
 import { useRef } from 'react'
+import { invoke } from '@tauri-apps/api/core'
 import { useVireStore, type VireBlock } from '../store/useVireStore'
 import { PomodoroBlock, type PomodoroData } from '../shapes/blocks/PomodoroBlock'
 import { TaskListBlock, type TaskListData } from '../shapes/blocks/TaskListBlock'
-import { AgentPreview } from '../shapes/blocks/StaticPreviews'
+import { AgentBlock, type AgentData } from '../shapes/blocks/AgentBlock'
 import { TerminalBlock } from '../shapes/blocks/TerminalBlock'
 import { NoteBlock, type NoteData } from '../shapes/blocks/NoteBlock'
 import { BrowserBlock, type BrowserData } from '../shapes/blocks/BrowserBlock'
+import { EditorBlock, type EditorData } from '../shapes/blocks/EditorBlock'
 
 const MIN_W = 160
 const MIN_H = 120
@@ -97,6 +99,13 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         borderRadius: 'var(--radius-block)',
         border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-divider)'}`,
         overflow: 'hidden',
+        // ponytail: forces its own GPU compositing layer. WKWebView (Tauri on
+        // macOS) has a known repaint-invalidation bug where a bordered/rounded
+        // box permanently loses its border/children paint once a sibling with
+        // its own layer (Terminal's <canvas>) passes over or near it — stays
+        // broken until something forces a repaint. Not reproducible in
+        // Chromium; this is the standard WebKit-side fix for that bug class.
+        transform: 'translateZ(0)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -133,7 +142,12 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         </div>
         <span
           onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => removeBlock(block.id)}
+          onClick={() => {
+            // Only the explicit ✕ kills a live terminal session — unmounting
+            // (project switch) leaves it running for reattach.
+            if (block.type === 'terminal') invoke('close_terminal', { surfaceId: block.id }).catch(() => {})
+            removeBlock(block.id)
+          }}
           style={{ color: 'var(--color-text-muted)', fontSize: 12, cursor: 'pointer' }}
         >
           ✕
@@ -144,7 +158,8 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         {block.type === 'pomodoro' && <PomodoroBlock id={block.id} data={block.data as PomodoroData} />}
         {block.type === 'tasklist' && <TaskListBlock id={block.id} data={block.data as TaskListData} />}
         {block.type === 'terminal' && <TerminalBlock id={block.id} />}
-        {block.type === 'agent' && <AgentPreview />}
+        {block.type === 'agent' && <AgentBlock id={block.id} data={block.data as AgentData} />}
+        {block.type === 'editor' && <EditorBlock id={block.id} data={block.data as EditorData} />}
         {block.type === 'note' && <NoteBlock id={block.id} data={block.data as NoteData} />}
         {block.type === 'browser' && <BrowserBlock id={block.id} data={block.data as BrowserData} />}
       </div>

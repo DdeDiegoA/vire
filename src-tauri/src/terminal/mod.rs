@@ -6,6 +6,10 @@ use vt100::{Color, Parser};
 pub enum TermCmd {
     Write(Vec<u8>),
     Resize { cols: u16, rows: u16 },
+    // Forces a re-emit of the current frame with no state change — used when a
+    // frontend reattaches to an already-running session so it can redraw
+    // immediately instead of waiting for the next write.
+    Snapshot,
     Kill,
 }
 
@@ -131,6 +135,7 @@ pub fn spawn(
                     parser.set_size(rows, cols);
                     on_frame(build_frame(&parser));
                 }
+                TermCmd::Snapshot => on_frame(build_frame(&parser)),
                 TermCmd::Kill => break,
             }
         }

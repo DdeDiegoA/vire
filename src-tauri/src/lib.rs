@@ -1,11 +1,13 @@
-use tauri::Manager;
+use tauri::menu::{Menu, MenuItem};
+use tauri::tray::TrayIconBuilder;
+use tauri::{Manager, WindowEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .manage(process::ProcessManager::default())
     .invoke_handler(tauri::generate_handler![
-      ipc::create_terminal,
+      ipc::open_terminal,
       ipc::terminal_input,
       ipc::resize_terminal,
       ipc::close_terminal,
@@ -16,7 +18,20 @@ pub fn run() {
       ipc::load_board,
       ipc::get_config,
       ipc::set_config,
+      ipc::read_text_file,
+      ipc::write_text_file,
+      ipc::run_agent,
     ])
+    // Closing the window hides it instead of quitting — terminal sessions
+    // (live PTY + vt100 thread in ProcessManager) keep running so reopening
+    // the window resumes them exactly where they were left. Only the tray's
+    // "Salir" does a real quit (kills every session first).
+    .on_window_event(|window, event| {
+      if let WindowEvent::CloseRequested { api, .. } = event {
+        api.prevent_close();
+        let _ = window.hide();
+      }
+    })
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -30,6 +45,28 @@ pub fn run() {
       let manager = project::ProjectManager::new(data_dir.join("vire.db"))
         .expect("failed to init project db");
       app.manage(manager);
+
+      let show_item = MenuItem::with_id(app, "show", "Mostrar Vire", true, None::<&str>)?;
+      let quit_item = MenuItem::with_id(app, "quit", "Salir", true, None::<&str>)?;
+      let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
+      TrayIconBuilder::new()
+        .icon(app.default_window_icon().cloned().unwrap())
+        .menu(&menu)
+        .on_menu_event(|app, event| match event.id().as_ref() {
+          "show" => {
+            if let Some(window) = app.get_webview_window("main") {
+              let _ = window.show();
+              let _ = window.set_focus();
+            }
+          }
+          "quit" => {
+            app.state::<process::ProcessManager>().kill_all();
+            app.exit(0);
+          }
+          _ => {}
+        })
+        .build(app)?;
+
       Ok(())
     })
     .run(tauri::generate_context!())
@@ -39,3 +76,4 @@ pub mod terminal;
 pub mod process;
 pub mod project;
 pub mod ipc;
+pub mod agent;

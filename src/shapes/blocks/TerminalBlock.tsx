@@ -129,13 +129,13 @@ export function TerminalBlock({ id }: { id: string }) {
       if (!created) {
         created = true
         size = next
-        invoke('create_terminal', {
+        invoke('open_terminal', {
           surfaceId: id,
           projectId,
           cols: next.cols,
           rows: next.rows,
           onFrame: channel,
-        }).catch((err) => console.error('create_terminal failed', err))
+        }).catch((err) => console.error('open_terminal failed', err))
         return
       }
 
@@ -148,10 +148,13 @@ export function TerminalBlock({ id }: { id: string }) {
     })
     observer.observe(container)
 
+    // No close_terminal here: unmounting (project switch, block scrolled out)
+    // must not kill the session — the PTY/vt100 thread keeps running in the
+    // backend and open_terminal reattaches to it next time this mounts.
+    // Explicit close (the block's ✕ button) is what actually kills it.
     return () => {
       observer.disconnect()
       if (resizeTimer) clearTimeout(resizeTimer)
-      invoke('close_terminal', { surfaceId: id }).catch(() => {})
     }
   }, [id])
 
