@@ -29,32 +29,38 @@ npm run build         # frontend build (tsc -b && vite build)
 npm run lint          # oxlint
 ```
 
-**Estado actual (Fase 1):** canvas funcional en `npm run dev` — topbar con pestañas de
-proyecto, toolbar flotante para crear bloques (Terminal/Pomodoro/Tareas/Browser/Nota),
-grid sutil, bloques Pomodoro y TaskList operativos y persistentes. Terminal/Browser/Nota
-son placeholders hasta Fase 2. `npm run tauri dev` requiere Rust + Zig instalados (ver
-Requisitos); el backend Rust aún son stubs.
+**Estado actual (Fase 5):** canvas funcional con 7 tipos de bloque — Terminal (libghostty
+real, sesiones persistentes), Agent (chat con IA), Editor (Monaco), Pomodoro (timer circular
+con precisión de milisegundos), TaskList, Browser y Nota. Persistencia en SQLite vía
+`ProjectManager` (proyectos, bloques, layout de canvas). CI/release workflows en GitHub
+Actions. Pase visual de estética "glass" (blur, sombras, focus rings) y escalado responsive
+por container queries en todos los bloques.
 
 ## Estructura
 
 ```
 vire/
-├── src/                  # Frontend (React + tldraw)
-│   ├── App.tsx           # Canvas principal (wiring topbar/toolbar/grid/shapes)
-│   ├── design-tokens.css # Design system
-│   ├── main.tsx          # Entry point
-│   ├── shapes/           # VireBlockShape (custom shape, dispatch por tipo)
-│   │   └── blocks/       # Pomodoro, TaskList
-│   ├── ui/               # VireTopbar, VireToolbar, VireGrid
-│   └── store/            # Zustand (proyecto activo, tabs)
-├── src-tauri/            # Backend (Rust)
+├── src/                     # Frontend (React + tldraw)
+│   ├── App.tsx              # Canvas principal (wiring topbar/toolbar/grid/shapes)
+│   ├── design-tokens.css    # Design system
+│   ├── main.tsx             # Entry point
+│   ├── canvas/               # VireCanvas, VireWindow (chrome de bloque), VireContextMenu
+│   ├── shapes/
+│   │   ├── blockTypes.ts    # Registro de tipos de bloque + iconos
+│   │   └── blocks/          # Terminal, Agent, Editor, Pomodoro, TaskList, Browser, Note
+│   ├── ui/                  # VireTopbar, VireToolbar
+│   ├── components/          # SettingsPanel
+│   └── store/                # Zustand (useVireStore, boardTypes, tauriStorage)
+├── src-tauri/                # Backend (Rust)
 │   ├── src/
-│   │   ├── lib.rs        # Entry Tauri
-│   │   ├── terminal/     # Integración libghostty
-│   │   ├── process/      # Gestión de procesos
-│   │   ├── project/      # Persistencia workspace
-│   │   └── ipc/          # Comandos Tauri
+│   │   ├── lib.rs           # Entry Tauri
+│   │   ├── terminal/        # Integración libghostty
+│   │   ├── process/         # Gestión de procesos
+│   │   ├── project/         # Persistencia SQLite (ProjectManager)
+│   │   ├── agent/           # Backend del bloque Agent
+│   │   └── ipc/             # Comandos Tauri
 │   └── tauri.conf.json
+├── .github/workflows/        # ci.yml, release.yml
 ├── .nvmrc
 └── package.json
 ```
@@ -63,9 +69,10 @@ vire/
 
 - **Fase 0** ✅ — Scaffold Tauri + tldraw + módulos Rust
 - **Fase 1** ✅ — Canvas y UI core (custom shapes, toolbar, topbar, grid, Pomodoro, TaskList)
-- **Fase 2** — Terminal engine (libghostty, streaming)
-- **Fase 3** — Persistencia (SQLite, layout)
-- **Fase 4** — CI/CD + DX
+- **Fase 2** ✅ — Terminal engine (libghostty, streaming)
+- **Fase 3** ✅ — Persistencia (SQLite, layout)
+- **Fase 4** ✅ — CI/CD + DX
+- **Fase 5** ✅ — Bloques Agent/Editor, persistencia de sesión de terminal, pase visual glass + escalado responsive
 
 ## Licencia
 
