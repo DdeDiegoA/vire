@@ -24,6 +24,16 @@ pub struct ProcessManager {
     map: Mutex<HashMap<String, TerminalHandle>>,
 }
 
+/// Cross-platform default shell: COMSPEC on Windows, SHELL on Unix, with
+/// hardcoded fallbacks for when neither env var exists.
+pub(crate) fn default_shell() -> String {
+    if cfg!(windows) {
+        std::env::var("COMSPEC").unwrap_or_else(|_| "cmd.exe".to_string())
+    } else {
+        std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string())
+    }
+}
+
 impl ProcessManager {
     pub fn spawn(
         &self,
@@ -42,7 +52,7 @@ impl ProcessManager {
             })
             .map_err(|e| e.to_string())?;
 
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+        let shell = default_shell();
         let child = pair
             .slave
             .spawn_command(CommandBuilder::new(shell))

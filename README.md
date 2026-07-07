@@ -1,6 +1,6 @@
 # Vire
 
-Infinite canvas workspace para desarrollo con IA. Terminales Ghostty + agentes IA + herramientas en bloques flotantes sobre un canvas infinito.
+Infinite canvas workspace para desarrollo con IA. Terminales vt100 + agentes IA + herramientas en bloques flotantes sobre un canvas infinito oscuro.
 
 ## Stack
 
@@ -8,16 +8,15 @@ Infinite canvas workspace para desarrollo con IA. Terminales Ghostty + agentes I
 |------|-----------|
 | Backend | Rust (Tauri v2) |
 | Frontend | React 19 + TypeScript + Vite |
-| Canvas | tldraw SDK |
-| Terminal | libghostty-rs (GHOSTTY_SOURCE_DIR + Zig 0.15.x) |
-| Build | Vite + Tauri CLI |
+| Canvas | Custom (pan/zoom manual, sin tldraw) |
+| Terminal | vt100 + portable-pty (wezterm crate) |
+| Estado | Zustand |
+| Fonts | Inter (UI) + JetBrains Mono (terminal) |
 
 ## Requisitos
 
 - Rust toolchain (rustc 1.77+)
 - Node.js 24.18 (ver `.nvmrc`)
-- macOS (Tauri targets `dmg`/`app`)
-- Zig 0.15.x en PATH (solo para libghostty)
 
 ## Desarrollo
 
@@ -29,36 +28,31 @@ npm run build         # frontend build (tsc -b && vite build)
 npm run lint          # oxlint
 ```
 
-**Estado actual (Fase 5):** canvas funcional con 7 tipos de bloque — Terminal (libghostty
-real, sesiones persistentes), Agent (chat con IA), Editor (Monaco), Pomodoro (timer circular
-con precisión de milisegundos), TaskList, Browser y Nota. Persistencia en SQLite vía
-`ProjectManager` (proyectos, bloques, layout de canvas). CI/release workflows en GitHub
-Actions. Pase visual de estética "glass" (blur, sombras, focus rings) y escalado responsive
-por container queries en todos los bloques.
+**Estado actual (Fase 5):** canvas funcional con 7 tipos de bloque — Terminal (vt100+portable-pty, sesiones persistentes con tray icon), Agent (chat con IA vía claude/opencode), Editor (Monaco), Pomodoro (timer circular con precisión de milisegundos), TaskList (con subtareas anidadas), Browser (webview embebido), y Nota (markdown con preview). Persistencia en SQLite vía ProjectManager (proyectos, bloques, layout de canvas, terminales). CI/release workflows en GitHub Actions.
 
 ## Estructura
 
 ```
 vire/
-├── src/                     # Frontend (React + tldraw)
-│   ├── App.tsx              # Canvas principal (wiring topbar/toolbar/grid/shapes)
+├── src/                     # Frontend (React)
+│   ├── App.tsx              # Layout principal (topbar + canvas + toolbar)
 │   ├── design-tokens.css    # Design system
 │   ├── main.tsx             # Entry point
-│   ├── canvas/               # VireCanvas, VireWindow (chrome de bloque), VireContextMenu
+│   ├── canvas/              # VireCanvas (pan/zoom/minimap), VireWindow (chrome de bloque), VireContextMenu
 │   ├── shapes/
-│   │   ├── blockTypes.ts    # Registro de tipos de bloque + iconos
+│   │   ├── blockTypes.ts    # Tipos de bloque + datos por defecto
 │   │   └── blocks/          # Terminal, Agent, Editor, Pomodoro, TaskList, Browser, Note
 │   ├── ui/                  # VireTopbar, VireToolbar
 │   ├── components/          # SettingsPanel
-│   └── store/                # Zustand (useVireStore, boardTypes, tauriStorage)
-├── src-tauri/                # Backend (Rust)
+│   └── store/               # Zustand (useVireStore, boardTypes, tauriStorage)
+├── src-tauri/               # Backend (Rust)
 │   ├── src/
-│   │   ├── lib.rs           # Entry Tauri
-│   │   ├── terminal/        # Integración libghostty
-│   │   ├── process/         # Gestión de procesos
+│   │   ├── lib.rs           # Entry Tauri + tray icon
+│   │   ├── terminal/        # vt100 parser + TermFrame builder
+│   │   ├── process/         # ProcessManager con sink swappable (reattach)
 │   │   ├── project/         # Persistencia SQLite (ProjectManager)
-│   │   ├── agent/           # Backend del bloque Agent
-│   │   └── ipc/             # Comandos Tauri
+│   │   ├── agent/           # Backend del bloque Agent (spawn CLI, stream JSON)
+│   │   └── ipc/             # 17 comandos Tauri
 │   └── tauri.conf.json
 ├── .github/workflows/        # ci.yml, release.yml
 ├── .nvmrc
@@ -67,12 +61,12 @@ vire/
 
 ## Fases
 
-- **Fase 0** ✅ — Scaffold Tauri + tldraw + módulos Rust
-- **Fase 1** ✅ — Canvas y UI core (custom shapes, toolbar, topbar, grid, Pomodoro, TaskList)
-- **Fase 2** ✅ — Terminal engine (libghostty, streaming)
-- **Fase 3** ✅ — Persistencia (SQLite, layout)
-- **Fase 4** ✅ — CI/CD + DX
-- **Fase 5** ✅ — Bloques Agent/Editor, persistencia de sesión de terminal, pase visual glass + escalado responsive
+- **Fase 0** ✅ — Scaffold Tauri + Vite + módulos Rust
+- **Fase 1** ✅ — Canvas custom (pan/zoom, bring-to-front), toolbar, topbar, grid, Pomodoro, TaskList
+- **Fase 2** ✅ — Terminal engine (vt100 + portable-pty, streaming via Channels, input handling)
+- **Fase 3** ✅ — Persistencia (SQLite, board snapshots, config CLIs)
+- **Fase 4** ✅ — CI/CD + Browser/Note blocks + terminal session persistence (tray + reattach)
+- **Fase 5** ✅ — Agent block, Monaco editor, pase visual glass + escalado responsive
 
 ## Licencia
 

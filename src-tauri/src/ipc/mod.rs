@@ -25,7 +25,7 @@ pub fn open_terminal(
     process.spawn(surface_id.clone(), cols, rows, move |frame| {
         let _ = on_frame.send(frame);
     })?;
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    let shell = crate::process::default_shell();
     project.insert_terminal(&surface_id, &project_id, &surface_id, None, &shell)
 }
 
