@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { VIRE_BLOCK_TYPES, iconByType, nameByType, type VireBlockType } from '../shapes/blockTypes'
+import { VIRE_BLOCK_TYPES, BLOCK_ICON, nameByType, type VireBlockType } from '../shapes/blockTypes'
 
 export function VireContextMenu({
   x,
@@ -32,6 +32,8 @@ export function VireContextMenu({
   return (
     <div
       ref={ref}
+      role="menu"
+      tabIndex={-1}
       onPointerDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
       style={{
@@ -39,18 +41,24 @@ export function VireContextMenu({
         left: x,
         top: y,
         zIndex: 300,
-        background: 'var(--color-surface)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-control)',
-        padding: 4,
-        minWidth: 160,
+        background: 'var(--glass-menu-bg)',
+        border: '0.5px solid var(--glass-block-border)',
+        borderRadius: 10,
+        boxShadow: 'var(--shadow-menu)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
+        padding: '6px 4px',
+        minWidth: 170,
         fontFamily: 'var(--font-ui)',
-        fontSize: 12,
+        fontSize: 'clamp(11px, 3cqw, 13px)',
       }}
     >
       {VIRE_BLOCK_TYPES.map((type) => (
         <button
           key={type}
+          type="button"
+          className="ctx-item"
+          role="menuitem"
           onClick={() => onSelect(type)}
           style={{
             display: 'flex',
@@ -60,15 +68,32 @@ export function VireContextMenu({
             background: 'none',
             border: 'none',
             color: 'var(--color-text-primary)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '6px 10px',
+            borderRadius: 5,
+            padding: '4px 8px',
             cursor: 'pointer',
             fontFamily: 'inherit',
             fontSize: 'inherit',
             textAlign: 'left',
           }}
         >
-          <span style={{ color: 'var(--color-text-secondary)' }}>{iconByType[type]}</span>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 'var(--radius-sm)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              color: 'var(--color-accent)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(9px, 2.5cqw, 10px)',
+              fontWeight: 600,
+            }}
+          >
+            {BLOCK_ICON[type]}
+          </span>
           {nameByType[type]}
         </button>
       ))}

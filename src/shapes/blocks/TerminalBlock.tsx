@@ -2,10 +2,14 @@ import { useEffect, useRef } from 'react'
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { useVireStore } from '../../store/useVireStore'
 
-const FONT = "11px 'JetBrains Mono', 'Cascadia Code', monospace"
-const CELL_W = 6.6
-const CELL_H = 15
 const PAD = 8
+const BASE_CELL_W = 6.6
+const BASE_CELL_H = 15
+
+function cellSizeFor(w: number) {
+  const scale = Math.min(1.7, Math.max(0.8, w / 480))
+  return { cellW: BASE_CELL_W * scale, cellH: BASE_CELL_H * scale, fontPx: 11 * scale }
+}
 
 interface TermCell {
   ch: string
@@ -23,57 +27,59 @@ interface TermFrame {
   grid: TermCell[][]
 }
 
-function cols(w: number) {
-  return Math.max(2, Math.floor((w - PAD * 2) / CELL_W))
+function cols(w: number, cellW: number) {
+  return Math.max(2, Math.floor((w - PAD * 2) / cellW))
 }
-function rows(h: number) {
-  return Math.max(1, Math.floor((h - PAD * 2) / CELL_H))
+function rows(h: number, cellH: number) {
+  return Math.max(1, Math.floor((h - PAD * 2) / cellH))
 }
 
-function drawFrame(canvas: HTMLCanvasElement, frame: TermFrame) {
+function drawFrame(canvas: HTMLCanvasElement, frame: TermFrame, zoom: number, containerW: number) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
-  const dpr = window.devicePixelRatio || 1
-  const w = frame.cols * CELL_W + PAD * 2
-  const h = frame.rows * CELL_H + PAD * 2
-  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
-    canvas.width = w * dpr
-    canvas.height = h * dpr
+  const { cellW, cellH, fontPx } = cellSizeFor(containerW)
+  const font = `${fontPx}px 'JetBrains Mono', 'Cascadia Code', monospace`
+  const scale = (window.devicePixelRatio || 1) * Math.max(1, zoom)
+  const w = frame.cols * cellW + PAD * 2
+  const h = frame.rows * cellH + PAD * 2
+  if (canvas.width !== w * scale || canvas.height !== h * scale) {
+    canvas.width = w * scale
+    canvas.height = h * scale
     canvas.style.width = `${w}px`
     canvas.style.height = `${h}px`
   }
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.fillStyle = '#0d0f12'
+  ctx.setTransform(scale, 0, 0, scale, 0, 0)
+  ctx.fillStyle = '#141414'
   ctx.fillRect(0, 0, w, h)
-  ctx.font = FONT
+  ctx.font = font
   ctx.textBaseline = 'top'
 
   frame.grid.forEach((line, y) => {
     line.forEach((cell, x) => {
-      const px = PAD + x * CELL_W
-      const py = PAD + y * CELL_H
+      const px = PAD + x * cellW
+      const py = PAD + y * cellH
       const inverse = cell.inverse
       const fg = cell.fg ? `rgb(${cell.fg.join(',')})` : '#e5e5e5'
       const bg = cell.bg ? `rgb(${cell.bg.join(',')})` : null
       const paintBg = inverse ? fg : bg
-      const paintFg = inverse ? (bg ?? '#0d0f12') : fg
+      const paintFg = inverse ? (bg ?? '#141414') : fg
       if (paintBg) {
         ctx.fillStyle = paintBg
-        ctx.fillRect(px, py, CELL_W, CELL_H)
+        ctx.fillRect(px, py, cellW, cellH)
       }
       if (cell.ch && cell.ch !== ' ') {
         ctx.fillStyle = paintFg
-        ctx.font = cell.bold ? `bold ${FONT}` : FONT
+        ctx.font = cell.bold ? `bold ${font}` : font
         ctx.fillText(cell.ch, px, py + 1)
       }
     })
   })
 
   if (frame.cursor.visible) {
-    const cx = PAD + frame.cursor.x * CELL_W
-    const cy = PAD + frame.cursor.y * CELL_H
+    const cx = PAD + frame.cursor.x * cellW
+    const cy = PAD + frame.cursor.y * cellH
     ctx.fillStyle = 'rgba(229,229,229,0.6)'
-    ctx.fillRect(cx, cy, CELL_W, CELL_H)
+    ctx.fillRect(cx, cy, cellW, cellH)
   }
 }
 
@@ -104,15 +110,24 @@ function keyToBytes(e: React.KeyboardEvent): Uint8Array | null {
   return null
 }
 
-export function TerminalBlock({ id }: { id: string }) {
+export function TerminalBlock({ id, zoom }: { id: string; zoom: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const lastFrameRef = useRef<TermFrame | null>(null)
+  const zoomRef = useRef(zoom)
+  zoomRef.current = zoom
+  const containerWRef = useRef(480)
   const projectId = useVireStore((s) => s.activeId)
+
+  useEffect(() => {
+    if (canvasRef.current && lastFrameRef.current) drawFrame(canvasRef.current, lastFrameRef.current, zoom, containerWRef.current)
+  }, [zoom])
 
   useEffect(() => {
     const channel = new Channel<TermFrame>()
     channel.onmessage = (frame) => {
-      if (canvasRef.current) drawFrame(canvasRef.current, frame)
+      lastFrameRef.current = frame
+      if (canvasRef.current) drawFrame(canvasRef.current, frame, zoomRef.current, containerWRef.current)
     }
 
     const container = containerRef.current
@@ -124,7 +139,11 @@ export function TerminalBlock({ id }: { id: string }) {
 
     const observer = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect
-      const next = { cols: cols(width), rows: rows(height) }
+      containerWRef.current = width
+      const { cellW, cellH } = cellSizeFor(width)
+      const next = { cols: cols(width, cellW), rows: rows(height, cellH) }
+
+      if (canvasRef.current && lastFrameRef.current) drawFrame(canvasRef.current, lastFrameRef.current, zoomRef.current, width)
 
       if (!created) {
         created = true
@@ -148,15 +167,11 @@ export function TerminalBlock({ id }: { id: string }) {
     })
     observer.observe(container)
 
-    // No close_terminal here: unmounting (project switch, block scrolled out)
-    // must not kill the session — the PTY/vt100 thread keeps running in the
-    // backend and open_terminal reattaches to it next time this mounts.
-    // Explicit close (the block's ✕ button) is what actually kills it.
     return () => {
       observer.disconnect()
       if (resizeTimer) clearTimeout(resizeTimer)
     }
-  }, [id])
+  }, [id, projectId])
 
   const onKeyDown: React.KeyboardEventHandler = (e) => {
     const bytes = keyToBytes(e)
@@ -168,9 +183,11 @@ export function TerminalBlock({ id }: { id: string }) {
   return (
     <div
       ref={containerRef}
+      role="application"
+      aria-label="Terminal"
       tabIndex={0}
       onKeyDown={onKeyDown}
-      style={{ width: '100%', height: '100%', overflow: 'hidden', outline: 'none' }}
+      style={{ width: '100%', height: '100%', overflow: 'hidden' }}
     >
       <canvas ref={canvasRef} style={{ display: 'block' }} />
     </div>

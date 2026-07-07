@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import { useVireStore } from '../../store/useVireStore'
-
-export interface BrowserData {
-  history: string[]
-  index: number
-}
-
-export const defaultBrowserData: BrowserData = { history: [''], index: 0 }
+import type { BrowserData } from '../blockTypes'
 
 function normalizeUrl(input: string): string {
   const trimmed = input.trim()
@@ -14,6 +8,15 @@ function normalizeUrl(input: string): string {
   if (/^https?:\/\//i.test(trimmed)) return trimmed
   return `https://${trimmed}`
 }
+
+const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
+  background: 'rgba(255, 255, 255, 0.04)',
+  border: '0.5px solid var(--glass-block-border)',
+  borderRadius: 6,
+  color: enabled ? '#ddd' : 'var(--color-text-muted)',
+  padding: '4px 8px',
+  cursor: enabled ? 'pointer' : 'default',
+})
 
 export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
   const updateBlockData = useVireStore((s) => s.updateBlockData)
@@ -25,7 +28,6 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
     const next = normalizeUrl(draft)
     setDraft(next)
     if (!next || next === url) return
-    // push: drop any forward history past the current index
     const history = [...data.history.slice(0, data.index + 1), next]
     updateBlockData(id, { history, index: history.length - 1 })
   }
@@ -46,56 +48,50 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
 
   const reload = () => setReloadKey((k) => k + 1)
 
-  const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
-    background: 'var(--color-surface)',
-    border: '1px solid var(--color-divider)',
-    borderRadius: 'var(--radius-control)',
-    color: enabled ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-    padding: '4px 8px',
-    cursor: enabled ? 'pointer' : 'default',
-  })
-
   return (
     <div onPointerDown={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', gap: 6, padding: 8, borderBottom: '1px solid var(--color-divider)' }}>
-        <button onClick={goBack} disabled={data.index === 0} style={navBtnStyle(data.index > 0)}>
+        <button type="button" onClick={goBack} disabled={data.index === 0} style={navBtnStyle(data.index > 0)}>
           ←
         </button>
         <button
+          type="button"
           onClick={goForward}
           disabled={data.index >= data.history.length - 1}
           style={navBtnStyle(data.index < data.history.length - 1)}
         >
           →
         </button>
-        <button onClick={reload} style={navBtnStyle(true)}>
+        <button type="button" onClick={reload} style={navBtnStyle(true)}>
           ⟳
         </button>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
         <input
+          className="v-focus-ring"
+          aria-label="URL del navegador"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && navigate()}
           placeholder="https://..."
           style={{
             flex: 1,
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)',
-            borderRadius: 'var(--radius-sm)',
-            color: 'var(--color-text-primary)',
-            padding: '4px 8px',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '0.5px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: 4,
+            color: '#555',
+            padding: '3px 8px',
             fontFamily: 'var(--font-ui)',
-            fontSize: 12,
+            fontSize: 'clamp(10px, 2.8cqw, 12px)',
           }}
         />
-        <button onClick={navigate} style={navBtnStyle(true)}>
+        <button type="button" onClick={navigate} style={navBtnStyle(true)}>
           Ir
         </button>
       </div>
       {url ? (
-        // ponytail: iframe navigation, not a native webview — sites with X-Frame-Options/CSP
-        // frame-ancestors will still refuse to load. Ceiling of this approach; upgrade to a
-        // Tauri child webview if that becomes a blocker.
-        <iframe key={reloadKey} src={url} title="browser-block" style={{ flex: 1, border: 'none', background: '#fff' }} />
+        <iframe key={reloadKey} src={url} title="browser-block" sandbox="allow-scripts allow-forms allow-popups" style={{ flex: 1, border: 'none', background: '#fff' }} />
       ) : (
         <div
           style={{
@@ -104,7 +100,7 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
             alignItems: 'center',
             justifyContent: 'center',
             color: 'var(--color-text-muted)',
-            fontSize: 12,
+            fontSize: 'clamp(11px, 3cqw, 13px)',
           }}
         >
           Escribe una URL para navegar

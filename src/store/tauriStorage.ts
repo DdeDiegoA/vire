@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core'
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
-import { emptyBoard, type Board } from './useVireStore'
+import { emptyBoard, type Board } from './boardTypes'
 
 interface ProjectDto {
   id: string
@@ -22,41 +22,44 @@ async function writeState(value: StorageValue<unknown>) {
     selectedBlockId: string | null
   }
 
-  for (const p of projects) {
-    await invoke('upsert_project', { id: p.id, name: p.name })
-  }
-  for (const [projectId, board] of Object.entries(boardsByProject)) {
-    const { camera, ...rest } = board
-    await invoke('save_board', {
-      projectId,
-      blocksJson: JSON.stringify(rest),
-      cameraJson: JSON.stringify(camera),
-    })
-  }
-  await invoke('set_config', { key: 'activeId', valueJson: JSON.stringify(activeId) })
-  await invoke('set_config', { key: 'selectedBlockId', valueJson: JSON.stringify(selectedBlockId) })
+  await Promise.all([
+    ...projects.map((p) => invoke('upsert_project', { id: p.id, name: p.name })),
+    ...Object.entries(boardsByProject).map(([projectId, board]) => {
+      const { camera, ...rest } = board
+      return invoke('save_board', {
+        projectId,
+        blocksJson: JSON.stringify(rest),
+        cameraJson: JSON.stringify(camera),
+      })
+    }),
+    invoke('set_config', { key: 'activeId', valueJson: JSON.stringify(activeId) }),
+    invoke('set_config', { key: 'selectedBlockId', valueJson: JSON.stringify(selectedBlockId) }),
+  ])
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-// zustand persists { projects, activeId, boardsByProject, selectedBlockId } as one blob;
-// this adapter fans that out across the projects/boards/configs SQLite tables instead of localStorage.
 export function createTauriStorage<S>(): PersistStorage<S> {
   return {
     async getItem(_name) {
       const projects = await invoke<ProjectDto[]>('list_projects')
       if (projects.length === 0) return null
 
+      const rows = await Promise.all(
+        projects.map((p) => invoke<BoardDto | null>('load_board', { projectId: p.id }))
+      )
       const boardsByProject: Record<string, Board> = {}
-      for (const p of projects) {
-        const row = await invoke<BoardDto | null>('load_board', { projectId: p.id })
+      projects.forEach((p, i) => {
+        const row = rows[i]
         boardsByProject[p.id] = row
           ? { ...JSON.parse(row.blocks_json), camera: JSON.parse(row.camera_json) }
           : emptyBoard()
-      }
+      })
 
-      const activeIdRaw = await invoke<string | null>('get_config', { key: 'activeId' })
-      const selectedRaw = await invoke<string | null>('get_config', { key: 'selectedBlockId' })
+      const [activeIdRaw, selectedRaw] = await Promise.all([
+        invoke<string | null>('get_config', { key: 'activeId' }),
+        invoke<string | null>('get_config', { key: 'selectedBlockId' }),
+      ])
 
       const state = {
         projects,
@@ -72,7 +75,6 @@ export function createTauriStorage<S>(): PersistStorage<S> {
       debounceTimer = setTimeout(() => void writeState(value), DEBOUNCE_MS)
     },
 
-    // ponytail: no project-deletion UI yet, so nothing calls removeItem — add when projects become deletable.
     async removeItem(_name) {},
   }
 }

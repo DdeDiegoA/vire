@@ -1,5 +1,5 @@
 import { useVireStore } from '../store/useVireStore'
-import { VIRE_BLOCK_TYPES, iconByType, nameByType, type VireBlockType } from '../shapes/blockTypes'
+import { VIRE_BLOCK_TYPES, BLOCK_ICON, nameByType, type VireBlockType } from '../shapes/blockTypes'
 
 export function VireToolbar() {
   const addBlock = useVireStore((s) => s.addBlock)
@@ -36,6 +36,7 @@ export function VireToolbar() {
         const isActive = activeType === blockType
         return (
           <button
+            type="button"
             key={blockType}
             onClick={() => handleAdd(blockType)}
             title={nameByType[blockType]}
@@ -50,11 +51,11 @@ export function VireToolbar() {
               borderRadius: 'var(--radius-pill)',
               color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
               cursor: 'pointer',
-              fontSize: 13,
+              fontSize: 'clamp(12px, 3.2cqw, 14px)',
               transition: 'background 0.15s',
             }}
           >
-            {iconByType[blockType]}
+            {BLOCK_ICON[blockType]}
           </button>
         )
       })}

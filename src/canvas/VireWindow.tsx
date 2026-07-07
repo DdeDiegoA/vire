@@ -1,20 +1,24 @@
 import { useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useVireStore, type VireBlock } from '../store/useVireStore'
-import { PomodoroBlock, type PomodoroData } from '../shapes/blocks/PomodoroBlock'
-import { TaskListBlock, type TaskListData } from '../shapes/blocks/TaskListBlock'
-import { AgentBlock, type AgentData } from '../shapes/blocks/AgentBlock'
+import { PomodoroBlock } from '../shapes/blocks/PomodoroBlock'
+import type { PomodoroData } from '../shapes/blockTypes'
+import { TaskListBlock } from '../shapes/blocks/TaskListBlock'
+import type { TaskListData } from '../shapes/blockTypes'
+import { AgentBlock } from '../shapes/blocks/AgentBlock'
+import type { AgentData } from '../shapes/blockTypes'
 import { TerminalBlock } from '../shapes/blocks/TerminalBlock'
-import { NoteBlock, type NoteData } from '../shapes/blocks/NoteBlock'
-import { BrowserBlock, type BrowserData } from '../shapes/blocks/BrowserBlock'
-import { EditorBlock, type EditorData } from '../shapes/blocks/EditorBlock'
+import { NoteBlock } from '../shapes/blocks/NoteBlock'
+import type { NoteData } from '../shapes/blockTypes'
+import { BrowserBlock } from '../shapes/blocks/BrowserBlock'
+import type { BrowserData } from '../shapes/blockTypes'
+import { EditorBlock } from '../shapes/blocks/EditorBlock'
+import type { EditorData } from '../shapes/blockTypes'
+import { BLOCK_ICON } from '../shapes/blockTypes'
 
 const MIN_W = 160
 const MIN_H = 120
 
-// preventDefault on pointerdown stops WebKit from anchoring a native text
-// selection before this runs; the body toggle is belt-and-suspenders for any
-// selection that starts elsewhere mid-drag. -webkit- prefix kept for older WKWebView.
 function disableTextSelection() {
   document.body.style.userSelect = 'none'
   ;(document.body.style as CSSStyleDeclaration & { webkitUserSelect?: string }).webkitUserSelect = 'none'
@@ -84,8 +88,14 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
     enableTextSelection()
   }
 
+  const closeBlock = () => {
+    if (block.type === 'terminal') invoke('close_terminal', { surfaceId: block.id }).catch(() => {})
+    removeBlock(block.id)
+  }
+
   return (
     <div
+      className="vire-block"
       onPointerDownCapture={select}
       onPointerDown={(e) => e.stopPropagation()}
       style={{
@@ -95,20 +105,20 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         width: block.w,
         height: block.h,
         zIndex: block.z,
-        background: 'var(--color-surface-elevated)',
+        background: 'var(--glass-block-bg)',
+        backdropFilter: 'var(--glass-blur)',
+        WebkitBackdropFilter: 'var(--glass-blur)',
         borderRadius: 'var(--radius-block)',
-        border: `1px solid ${isSelected ? 'var(--color-accent)' : 'var(--color-divider)'}`,
+        border: `0.5px solid ${isSelected ? 'var(--color-accent)' : 'var(--glass-block-border)'}`,
+        boxShadow: 'var(--shadow-block)',
+        transition: 'box-shadow .2s ease, transform .2s ease',
         overflow: 'hidden',
-        // ponytail: forces its own GPU compositing layer. WKWebView (Tauri on
-        // macOS) has a known repaint-invalidation bug where a bordered/rounded
-        // box permanently loses its border/children paint once a sibling with
-        // its own layer (Terminal's <canvas>) passes over or near it — stays
-        // broken until something forces a repaint. Not reproducible in
-        // Chromium; this is the standard WebKit-side fix for that bug class.
         transform: 'translateZ(0)',
         display: 'flex',
         flexDirection: 'column',
-      }}
+        containerType: 'size',
+        containerName: 'vire-block',
+      } as React.CSSProperties}
     >
       <div
         onPointerDown={onHeaderPointerDown}
@@ -117,49 +127,66 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '6px 10px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: 11,
+          height: 'clamp(28px, 8cqh, 40px)',
+          padding: '0 12px',
+          fontFamily: 'var(--font-ui)',
+          fontSize: 'clamp(10px, 3cqmin, 14px)',
           fontWeight: 500,
-          color: 'var(--color-text-muted)',
-          background: 'var(--color-surface-elevated)',
-          borderBottom: '1px solid var(--color-divider)',
+          color: '#b5b5b5',
+          borderBottom: '0.5px solid var(--glass-hairline)',
           cursor: 'grab',
-        }}
+          gap: 8,
+        } as React.CSSProperties}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: 'var(--radius-pill)',
-              background: 'var(--color-text-secondary)',
-            }}
-          />
-          <span>{block.title}</span>
+        <div
+          style={{
+            width: 'clamp(14px, 4.5cqmin, 20px)',
+            height: 'clamp(14px, 4.5cqmin, 20px)',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-sm)',
+            background: 'rgba(255, 255, 255, 0.06)',
+            color: 'var(--color-accent)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'clamp(8px, 2.5cqmin, 10px)',
+            fontWeight: 600,
+          } as React.CSSProperties}
+        >
+          {BLOCK_ICON[block.type] ?? block.type[0]?.toUpperCase()}
         </div>
-        <span
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => {
-            // Only the explicit ✕ kills a live terminal session — unmounting
-            // (project switch) leaves it running for reattach.
-            if (block.type === 'terminal') invoke('close_terminal', { surfaceId: block.id }).catch(() => {})
-            removeBlock(block.id)
-          }}
-          style={{ color: 'var(--color-text-muted)', fontSize: 12, cursor: 'pointer' }}
+        <span style={{ flex: 1 }}>{block.title}</span>
+        <button
+          type="button"
+          className="block-close"
+          aria-label={`Cerrar ${block.title}`}
+          onClick={closeBlock}
+          style={{
+            width: 'clamp(16px, 5.5cqmin, 22px)',
+            height: 'clamp(16px, 5.5cqmin, 22px)',
+            flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: 'var(--radius-sm)',
+            color: '#555',
+            fontSize: 'clamp(10px, 3cqmin, 13px)',
+            cursor: 'pointer',
+            background: 'none',
+            border: 'none',
+          } as React.CSSProperties}
         >
           ✕
-        </span>
+        </button>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto' }}>
         {block.type === 'pomodoro' && <PomodoroBlock id={block.id} data={block.data as PomodoroData} />}
         {block.type === 'tasklist' && <TaskListBlock id={block.id} data={block.data as TaskListData} />}
-        {block.type === 'terminal' && <TerminalBlock id={block.id} />}
+        {block.type === 'terminal' && <TerminalBlock id={block.id} zoom={zoom} />}
         {block.type === 'agent' && <AgentBlock id={block.id} data={block.data as AgentData} />}
-        {block.type === 'editor' && <EditorBlock id={block.id} data={block.data as EditorData} />}
+        {block.type === 'editor' && <EditorBlock id={block.id} data={block.data as EditorData} w={block.w} h={block.h} />}
         {block.type === 'note' && <NoteBlock id={block.id} data={block.data as NoteData} />}
         {block.type === 'browser' && <BrowserBlock id={block.id} data={block.data as BrowserData} />}
       </div>

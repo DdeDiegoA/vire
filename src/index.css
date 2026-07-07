@@ -15,3 +15,45 @@ html, body, #root {
   width: 100%;
   height: 100%;
 }
+
+/* inline styles can't express :hover — these are the only hover/focus rules in the app */
+.vire-block:hover {
+  box-shadow: var(--shadow-block-hover);
+  transform: translateZ(0) translateY(-1px);
+}
+
+.vire-block .block-close {
+  transition: background 0.12s, color 0.12s;
+}
+.vire-block .block-close:hover {
+  color: #ff5f57;
+  background: rgba(255, 95, 87, 0.08);
+}
+
+.vire-tab {
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.vire-tab:not(.active):hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.v-focus-ring:focus {
+  outline: none;
+  border-color: var(--focus-border) !important;
+  box-shadow: var(--focus-ring);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.note-content h3 {
+  color: var(--color-accent);
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+
+.ctx-item {
+  transition: background 0.1s ease;
+}
+.ctx-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

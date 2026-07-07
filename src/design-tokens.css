@@ -49,4 +49,23 @@
   --space-6: 24px;
   --space-10: 40px;
   --space-section: 120px;
+
+  /* ── Glass (blocks, topbar, context menu) ── */
+  --glass-block-bg: rgba(30, 30, 30, 0.78);
+  --glass-block-border: rgba(255, 255, 255, 0.08);
+  --glass-block-border-hover: rgba(255, 255, 255, 0.07);
+  --glass-hairline: rgba(255, 255, 255, 0.06);
+  --glass-topbar-bg: rgba(16, 16, 16, 0.72);
+  --glass-menu-bg: rgba(52, 52, 52, 0.88);
+  --glass-blur: blur(20px) saturate(180%);
+  --glass-blur-topbar: blur(20px) saturate(140%);
+
+  --shadow-block: 0 0 0 0.5px rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 40px rgba(0, 0, 0, 0.45);
+  --shadow-block-hover: 0 0 0 0.5px rgba(255, 255, 255, 0.07), 0 2px 6px rgba(0, 0, 0, 0.45), 0 12px 48px rgba(0, 0, 0, 0.5);
+  --shadow-menu: 0 0 0 0.5px rgba(0, 0, 0, 0.2), 0 4px 24px rgba(0, 0, 0, 0.5);
+
+  --focus-ring: 0 0 0 3px rgba(231, 197, 154, 0.1);
+  --focus-border: rgba(231, 197, 154, 0.35);
+
+  --surface-inset: rgba(0, 0, 0, 0.3);
 }

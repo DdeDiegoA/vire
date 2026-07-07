@@ -1,43 +1,46 @@
 import { useState } from 'react'
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { useVireStore } from '../../store/useVireStore'
-
-export interface AgentData {
-  cli: 'claude' | 'opencode'
-  sessionId?: string
-}
-
-export const defaultAgentData: AgentData = { cli: 'claude' }
+import type { AgentData } from '../blockTypes'
 
 type Entry =
   | { kind: 'prompt'; text: string }
   | { kind: 'event'; raw: unknown }
   | { kind: 'error'; text: string }
 
-// ponytail: raw JSON events from the CLI are rendered generically (name +
-// pretty JSON) instead of a per-CLI parsed UI — claude (stream-json) and
-// opencode (--format json) don't share a schema yet. Upgrade to structured
-// tool-call cards once real usage shows what's common across both.
 function EventCard({ raw }: { raw: unknown }) {
   const obj = raw as Record<string, unknown>
   const label = typeof obj?.type === 'string' ? obj.type : 'event'
   return (
     <div
       style={{
-        border: '1px solid var(--color-divider)',
-        borderRadius: 'var(--radius-control)',
-        padding: '6px 8px',
-        marginBottom: 6,
-        background: 'var(--color-surface)',
+        border: '0.5px solid rgba(255, 255, 255, 0.03)',
+        borderRadius: 4,
+        padding: '4px 7px',
+        marginBottom: 3,
+        background: 'rgba(0, 0, 0, 0.15)',
       }}
     >
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--color-path)' }}>{label}</div>
+      <span
+        style={{
+          display: 'inline-block',
+          background: 'rgba(255, 255, 255, 0.05)',
+          color: 'var(--color-accent)',
+          padding: '2px 6px',
+          borderRadius: 4,
+          fontFamily: 'var(--font-mono)',
+          fontSize: 'clamp(9px, 2.5cqw, 10px)',
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </span>
       <pre
         style={{
           margin: '4px 0 0',
           fontFamily: 'var(--font-mono)',
-          fontSize: 10,
-          color: 'var(--color-text-secondary)',
+          fontSize: 'clamp(10px, 2.8cqw, 11px)',
+          color: '#888',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
         }}
@@ -87,6 +90,8 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
     }
   }
 
+  let entryKey = 0
+
   return (
     <div onPointerDown={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div
@@ -99,66 +104,69 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
         }}
       >
         <select
+          className="v-focus-ring"
+          aria-label="CLI a usar"
           value={data.cli}
           onChange={(e) => updateBlockData(id, { ...data, cli: e.target.value as AgentData['cli'], sessionId: undefined })}
           style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-text-primary)',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '0.5px solid var(--glass-block-border)',
+            borderRadius: 6,
+            color: '#ccc',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 'clamp(10px, 2.8cqw, 11px)',
             padding: '3px 6px',
           }}
         >
           <option value="claude">claude</option>
           <option value="opencode">opencode</option>
         </select>
-        {running && <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>ejecutando…</span>}
+        {running && <span style={{ fontSize: 'clamp(10px, 2.8cqw, 11px)', color: 'var(--color-text-muted)' }}>ejecutando…</span>}
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', padding: 10 }}>
-        {entries.map((entry, i) =>
-          entry.kind === 'prompt' ? (
-            <div key={i} style={{ color: 'var(--color-text-primary)', fontSize: 12, marginBottom: 8, fontWeight: 500 }}>
-              {entry.text}
-            </div>
-          ) : entry.kind === 'error' ? (
-            <div key={i} style={{ color: 'var(--color-err)', fontSize: 11, marginBottom: 8 }}>
-              {entry.text}
-            </div>
-          ) : (
-            <EventCard key={i} raw={entry.raw} />
-          ),
-        )}
+        {entries.map((entry) => {
+          const key = `${entry.kind}-${entryKey++}`
+          if (entry.kind === 'prompt') {
+            return <div key={key} style={{ color: 'var(--color-text-primary)', fontSize: 'clamp(11px, 3cqw, 12px)', marginBottom: 8, fontWeight: 500 }}>{entry.text}</div>
+          }
+          if (entry.kind === 'error') {
+            return <div key={key} style={{ color: 'var(--color-err)', fontSize: 'clamp(10px, 2.8cqw, 11px)', marginBottom: 8 }}>{entry.text}</div>
+          }
+          return <EventCard key={key} raw={entry.raw} />
+        })}
       </div>
 
       <div style={{ display: 'flex', gap: 6, padding: 8, borderTop: '1px solid var(--color-divider)' }}>
         <input
+          className="v-focus-ring"
+          aria-label="Mensaje para el agente"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && send()}
           placeholder="Escribe un mensaje..."
           style={{
             flex: 1,
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-text-primary)',
-            fontSize: 12,
-            padding: '4px 8px',
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '0.5px solid var(--glass-block-border)',
+            borderRadius: 6,
+            color: '#ccc',
+            fontSize: 'clamp(11px, 3cqw, 12px)',
+            padding: '4px 9px',
           }}
         />
         <button
+          type="button"
+          className="v-focus-ring"
           onClick={send}
           disabled={running}
           style={{
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-text-secondary)',
-            padding: '4px 10px',
-            fontSize: 11,
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '0.5px solid var(--glass-block-border)',
+            borderRadius: 6,
+            color: '#aaa',
+            padding: '4px 11px',
+            fontSize: 'clamp(10px, 2.8cqw, 11px)',
             cursor: running ? 'default' : 'pointer',
           }}
         >

@@ -12,25 +12,24 @@ const MINIMAP_W = 180
 const MINIMAP_H = 120
 const MINIMAP_PAD = 60
 
+const pillButtonStyle: React.CSSProperties = {
+  position: 'absolute',
+  zIndex: 150,
+  background: 'var(--glass-block-bg)',
+  border: '0.5px solid var(--glass-block-border)',
+  borderRadius: 'var(--radius-pill)',
+  color: 'var(--color-text-secondary)',
+  padding: '4px 10px',
+  cursor: 'pointer',
+}
+
 function ZoomIndicator({ zoom, onReset }: { zoom: number; onReset: () => void }) {
   return (
     <button
+      type="button"
       onClick={onReset}
       title="Restablecer zoom (100%)"
-      style={{
-        position: 'absolute',
-        left: 16,
-        bottom: 16,
-        zIndex: 150,
-        background: 'var(--color-surface-elevated)',
-        border: '1px solid var(--color-divider)',
-        borderRadius: 'var(--radius-pill)',
-        color: 'var(--color-text-secondary)',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 11,
-        padding: '4px 10px',
-        cursor: 'pointer',
-      }}
+      style={{ ...pillButtonStyle, left: 16, bottom: 16, fontFamily: 'var(--font-mono)', fontSize: 'clamp(10px, 2.8cqw, 12px)' }}
     >
       {Math.round(zoom * 100)}%
     </button>
@@ -123,27 +122,47 @@ export function VireCanvas() {
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const panRef = useRef<{ startX: number; startY: number; camX: number; camY: number } | null>(null)
+  const zoomAnimRef = useRef<{ targetZ: number; anchorX: number; anchorY: number; raf: number | null }>({
+    targetZ: camera.z,
+    anchorX: 0,
+    anchorY: 0,
+    raf: null,
+  })
 
   const toWorld = (screenX: number, screenY: number) => ({
     x: (screenX - camera.x) / camera.z,
     y: (screenY - camera.y) / camera.z,
   })
 
+  const stepZoom = () => {
+    const anim = zoomAnimRef.current
+    const board = useVireStore.getState().boardsByProject[useVireStore.getState().activeId]
+    const cam = board?.camera ?? { x: 0, y: 0, z: 1 }
+    const diff = anim.targetZ - cam.z
+    const newZ = Math.abs(diff) < 0.001 ? anim.targetZ : cam.z + diff * 0.25
+    setCamera({
+      x: anim.anchorX - (anim.anchorX - cam.x) * (newZ / cam.z),
+      y: anim.anchorY - (anim.anchorY - cam.y) * (newZ / cam.z),
+      z: newZ,
+    })
+    if (Math.abs(anim.targetZ - newZ) < 0.001) {
+      anim.raf = null
+      return
+    }
+    anim.raf = requestAnimationFrame(stepZoom)
+  }
+
   const onWheel: React.WheelEventHandler = (e) => {
     e.preventDefault()
-    // Trackpad pinch-zoom and ctrl+wheel both report ctrlKey=true (browser convention);
-    // plain wheel/trackpad two-finger scroll pans instead.
     if (e.ctrlKey) {
+      const anim = zoomAnimRef.current
+      if (anim.raf == null) anim.targetZ = camera.z
       const factor = Math.exp(-e.deltaY * 0.01)
-      const newZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, camera.z * factor))
+      anim.targetZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, anim.targetZ * factor))
       const rect = e.currentTarget.getBoundingClientRect()
-      const cx = e.clientX - rect.left
-      const cy = e.clientY - rect.top
-      setCamera({
-        x: cx - (cx - camera.x) * (newZ / camera.z),
-        y: cy - (cy - camera.y) * (newZ / camera.z),
-        z: newZ,
-      })
+      anim.anchorX = e.clientX - rect.left
+      anim.anchorY = e.clientY - rect.top
+      if (anim.raf == null) anim.raf = requestAnimationFrame(stepZoom)
     } else {
       setCamera({ x: camera.x - e.deltaX, y: camera.y - e.deltaY, z: camera.z })
     }
@@ -206,10 +225,8 @@ export function VireCanvas() {
         style={{
           position: 'absolute',
           inset: 0,
-          opacity: 'var(--grid-opacity)',
-          backgroundImage:
-            'linear-gradient(var(--color-text-primary) 1px, transparent 1px), linear-gradient(90deg, var(--color-text-primary) 1px, transparent 1px)',
-          backgroundSize: `${40 * camera.z}px ${40 * camera.z}px`,
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,.015) 1px, transparent 1px)',
+          backgroundSize: `${24 * camera.z}px ${24 * camera.z}px`,
           backgroundPosition: `${camera.x}px ${camera.y}px`,
           pointerEvents: 'none',
         }}
@@ -229,25 +246,23 @@ export function VireCanvas() {
       {menu && (
         <VireContextMenu x={menu.screenX} y={menu.screenY} onSelect={handleCreate} onClose={() => setMenu(null)} />
       )}
-      <ZoomIndicator zoom={camera.z} onReset={() => setCamera({ ...camera, z: 1 })} />
+      <ZoomIndicator
+        zoom={camera.z}
+        onReset={() => {
+          const anim = zoomAnimRef.current
+          if (anim.raf != null) cancelAnimationFrame(anim.raf)
+          anim.raf = null
+          anim.targetZ = 1
+          setCamera({ ...camera, z: 1 })
+        }}
+      />
       <MiniMap camera={camera} blocks={blocks} />
       <button
+        type="button"
         onClick={() => setSettingsOpen((v) => !v)}
         onPointerDown={(e) => e.stopPropagation()}
         title="Config AI CLIs"
-        style={{
-          position: 'absolute',
-          top: 16,
-          right: 16,
-          zIndex: 150,
-          background: 'var(--color-surface-elevated)',
-          border: '1px solid var(--color-divider)',
-          borderRadius: 'var(--radius-pill)',
-          color: 'var(--color-text-secondary)',
-          fontSize: 13,
-          padding: '4px 10px',
-          cursor: 'pointer',
-        }}
+        style={{ ...pillButtonStyle, top: 16, right: 16, fontSize: 'clamp(12px, 3.2cqw, 14px)' }}
       >
         ⚙
       </button>

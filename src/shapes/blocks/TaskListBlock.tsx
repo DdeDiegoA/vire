@@ -1,44 +1,6 @@
 import { useState } from 'react'
 import { useVireStore } from '../../store/useVireStore'
-
-export interface TaskItem {
-  id: number
-  text: string
-  done: boolean
-  children?: TaskItem[]
-}
-
-export interface TaskListData {
-  items: TaskItem[]
-  seq: number
-}
-
-export const defaultTaskListData: TaskListData = {
-  items: [],
-  seq: 0,
-}
-
-function updateTree(items: TaskItem[], itemId: number, updater: (item: TaskItem) => TaskItem): TaskItem[] {
-  return items.map((item) => {
-    if (item.id === itemId) return updater(item)
-    if (item.children?.length) return { ...item, children: updateTree(item.children, itemId, updater) }
-    return item
-  })
-}
-
-function removeFromTree(items: TaskItem[], itemId: number): TaskItem[] {
-  return items
-    .filter((item) => item.id !== itemId)
-    .map((item) => (item.children ? { ...item, children: removeFromTree(item.children, itemId) } : item))
-}
-
-function addChild(items: TaskItem[], parentId: number, child: TaskItem): TaskItem[] {
-  return items.map((item) => {
-    if (item.id === parentId) return { ...item, children: [...(item.children ?? []), child] }
-    if (item.children?.length) return { ...item, children: addChild(item.children, parentId, child) }
-    return item
-  })
-}
+import { updateTree, removeFromTree, addChild, type TaskItem, type TaskListData } from '../blockTypes'
 
 const rowStyle = {
   flex: 1,
@@ -84,13 +46,14 @@ export function TaskListBlock({ id, data }: { id: string; data: TaskListData }) 
   return (
     <div
       onPointerDown={(e) => e.stopPropagation()}
-      style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, fontFamily: 'var(--font-ui)', fontSize: 13 }}
+      style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, fontFamily: 'var(--font-ui)', fontSize: 'clamp(12px, 3cqw, 16px)' }}
     >
       {data.items.map((item) => (
         <TaskRow key={item.id} item={item} depth={0} onToggle={toggleItem} onRemove={removeItem} onAddSubtask={addSubtask} />
       ))}
       <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
         <input
+          aria-label="Nueva tarea"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addItem()}
@@ -98,6 +61,7 @@ export function TaskListBlock({ id, data }: { id: string; data: TaskListData }) 
           style={rowStyle}
         />
         <button
+          type="button"
           onClick={addItem}
           style={{
             background: 'var(--color-surface)',
@@ -140,17 +104,24 @@ function TaskRow({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: depth * 16 }}>
-        <input type="checkbox" checked={item.done} onChange={() => onToggle(item.id)} />
+        <input
+          type="checkbox"
+          aria-label={`Marcar "${item.text}" como ${item.done ? 'pendiente' : 'completada'}`}
+          checked={item.done}
+          onChange={() => onToggle(item.id)}
+          style={{ accentColor: 'var(--color-accent)' }}
+        />
         <span
           style={{
             flex: 1,
-            color: item.done ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+            color: item.done ? '#444' : 'var(--color-text-primary)',
             textDecoration: item.done ? 'line-through' : 'none',
           }}
         >
           {item.text}
         </span>
         <button
+          type="button"
           onClick={() => setAdding((v) => !v)}
           title="Agregar subtarea"
           style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
@@ -158,6 +129,7 @@ function TaskRow({
           ↳
         </button>
         <button
+          type="button"
           onClick={() => onRemove(item.id)}
           style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer' }}
         >
@@ -168,12 +140,12 @@ function TaskRow({
       {adding && (
         <div style={{ display: 'flex', gap: 6, paddingLeft: (depth + 1) * 16 }}>
           <input
-            autoFocus
+            aria-label="Subtarea"
             value={subDraft}
             onChange={(e) => setSubDraft(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && commitSubtask()}
             placeholder="Subtarea..."
-            style={{ ...rowStyle, padding: '3px 6px', fontSize: 12 }}
+            style={{ ...rowStyle, padding: '3px 6px' }}
           />
         </div>
       )}

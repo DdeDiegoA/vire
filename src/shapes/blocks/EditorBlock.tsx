@@ -7,10 +7,8 @@ import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
 import { useVireStore } from '../../store/useVireStore'
+import type { EditorData } from '../blockTypes'
 
-// ponytail: Monaco needs its language workers wired manually under Vite (no
-// monaco webpack plugin here) — without this it falls back to main-thread
-// tokenizing only, breaking type/lint features per-language.
 self.MonacoEnvironment = {
   getWorker(_workerId: string, label: string) {
     if (label === 'json') return new jsonWorker()
@@ -21,28 +19,56 @@ self.MonacoEnvironment = {
   },
 }
 
-export interface EditorData {
-  path: string
-}
-
-export const defaultEditorData: EditorData = { path: '' }
-
 monaco.editor.defineTheme('vire-dark', {
   base: 'vs-dark',
   inherit: true,
-  rules: [],
+  rules: [
+    { token: 'keyword', foreground: 'fc618d' },
+    { token: 'string', foreground: 'e5c07b' },
+    { token: 'comment', foreground: '4a4a4a', fontStyle: 'italic' },
+    { token: 'type', foreground: '7ee787' },
+  ],
   colors: {
     'editor.background': '#1a1a1a',
     'editor.foreground': '#f3f3f3',
   },
 })
 
-export function EditorBlock({ id, data }: { id: string; data: EditorData }) {
+function fontSizeForBlock(w: number) {
+  return Math.min(18, Math.max(11, w / 30))
+}
+
+const buttonStyle: React.CSSProperties = {
+  background: 'rgba(255, 255, 255, 0.06)',
+  border: '0.5px solid var(--glass-block-border)',
+  borderRadius: 6,
+  color: '#aaa',
+  padding: '3px 9px',
+  fontSize: 'clamp(9px, 2.2cqw, 12px)',
+  cursor: 'pointer',
+}
+
+function languageFromPath(path: string): string {
+  const ext = path.split('.').pop()?.toLowerCase()
+  const map: Record<string, string> = {
+    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
+    rs: 'rust', py: 'python', go: 'go', json: 'json', md: 'markdown',
+    css: 'css', html: 'html', toml: 'ini', yaml: 'yaml', yml: 'yaml', sh: 'shell',
+  }
+  return (ext && map[ext]) || 'plaintext'
+}
+
+export function EditorBlock({ id, data, w, h }: { id: string; data: EditorData; w: number; h: number }) {
   const updateBlockData = useVireStore((s) => s.updateBlockData)
   const containerRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null)
-  const [pathInput, setPathInput] = useState(data.path)
+  const [pathInput, setPathInput] = useState(() => data.path)
   const [status, setStatus] = useState('')
+
+  useEffect(() => {
+    setPathInput(data.path)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.path])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -51,13 +77,17 @@ export function EditorBlock({ id, data }: { id: string; data: EditorData }) {
       language: 'plaintext',
       theme: 'vire-dark',
       fontFamily: "'JetBrains Mono', monospace",
-      fontSize: 12,
+      fontSize: fontSizeForBlock(w),
       minimap: { enabled: false },
       automaticLayout: true,
     })
     editorRef.current = editor
     return () => editor.dispose()
   }, [])
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({ fontSize: fontSizeForBlock(w) })
+  }, [w, h])
 
   const load = async (path: string) => {
     if (!path) return
@@ -73,7 +103,6 @@ export function EditorBlock({ id, data }: { id: string; data: EditorData }) {
 
   useEffect(() => {
     load(data.path)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.path])
 
   const openPath = () => {
@@ -100,6 +129,8 @@ export function EditorBlock({ id, data }: { id: string; data: EditorData }) {
 
   return (
     <div
+      role="application"
+      aria-label="Editor de código"
       onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={onKeyDown}
       style={{ display: 'flex', flexDirection: 'column', height: '100%' }}
@@ -114,46 +145,28 @@ export function EditorBlock({ id, data }: { id: string; data: EditorData }) {
         }}
       >
         <input
+          className="v-focus-ring"
+          aria-label="Ruta del archivo"
           value={pathInput}
           onChange={(e) => setPathInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && openPath()}
           placeholder="/ruta/al/archivo"
           style={{
             flex: 1,
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-divider)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-text-primary)',
+            background: 'rgba(0, 0, 0, 0.25)',
+            border: '0.5px solid var(--glass-block-border)',
+            borderRadius: 6,
+            color: '#ccc',
             fontFamily: 'var(--font-mono)',
-            fontSize: 11,
+            fontSize: 'clamp(9px, 2.2cqw, 12px)',
             padding: '3px 6px',
           }}
         />
-        <button onClick={openPath} style={buttonStyle}>Abrir</button>
-        <button onClick={save} style={buttonStyle}>Guardar</button>
-        {status && <span style={{ fontSize: 10, color: 'var(--color-text-muted)' }}>{status}</span>}
+        <button type="button" className="v-focus-ring" onClick={openPath} style={buttonStyle}>Abrir</button>
+        <button type="button" className="v-focus-ring" onClick={save} style={buttonStyle}>Guardar</button>
+        {status && <span style={{ fontSize: 'clamp(8px, 2cqw, 11px)', color: 'var(--color-text-muted)' }}>{status}</span>}
       </div>
       <div ref={containerRef} style={{ flex: 1 }} />
     </div>
   )
-}
-
-const buttonStyle: React.CSSProperties = {
-  background: 'var(--color-surface)',
-  border: '1px solid var(--color-divider)',
-  borderRadius: 'var(--radius-control)',
-  color: 'var(--color-text-secondary)',
-  padding: '2px 8px',
-  fontSize: 11,
-  cursor: 'pointer',
-}
-
-function languageFromPath(path: string): string {
-  const ext = path.split('.').pop()?.toLowerCase()
-  const map: Record<string, string> = {
-    ts: 'typescript', tsx: 'typescript', js: 'javascript', jsx: 'javascript',
-    rs: 'rust', py: 'python', go: 'go', json: 'json', md: 'markdown',
-    css: 'css', html: 'html', toml: 'ini', yaml: 'yaml', yml: 'yaml', sh: 'shell',
-  }
-  return (ext && map[ext]) || 'plaintext'
 }
