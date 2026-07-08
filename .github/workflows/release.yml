@@ -5,7 +5,7 @@ on:
     tags: ['v*']
 
 jobs:
-  release:
+  build:
     permissions:
       contents: write
     strategy:
@@ -33,6 +33,7 @@ jobs:
       - run: npm ci --loglevel verbose
 
       - uses: tauri-apps/tauri-action@v1
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -42,3 +43,75 @@ jobs:
           releaseName: 'Vire ${{ github.ref_name }}'
           releaseDraft: false
           prerelease: false
+
+  updater-json:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Generate latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          REPO="${{ github.repository }}"
+
+          echo "Version: $VERSION"
+          echo "Repo: $REPO"
+
+          assets=$(curl -sSL \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/releases/tags/${{ github.ref_name }}")
+
+          release_id=$(echo "$assets" | jq -r '.id')
+          echo "Release ID: $release_id"
+
+          get_asset_url() {
+            local pattern="$1"
+            echo "$assets" | jq -r --arg p "$pattern" \
+              '[.assets[] | select(.name | endswith($p)) | .browser_download_url][0] // ""'
+          }
+
+          DARWIN_URL=$(get_asset_url "_aarch64.dmg")
+          DARWIN_SIG=$(get_asset_url "_aarch64.dmg.sig")
+          WIN64_URL=$(get_asset_url "_x64-setup.exe")
+          WIN64_SIG=$(get_asset_url "_x64-setup.exe.sig")
+          LINUX_URL=$(get_asset_url "_amd64.AppImage")
+          LINUX_SIG=$(get_asset_url "_amd64.AppImage.sig")
+
+          jq -n --arg version "$VERSION" \
+            --arg notes "Ver release notes en https://github.com/$REPO/releases/tag/${{ github.ref_name }}" \
+            --arg pub_date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg darwin_url "$DARWIN_URL" \
+            --arg darwin_sig "$DARWIN_SIG" \
+            --arg win64_url "$WIN64_URL" \
+            --arg win64_sig "$WIN64_SIG" \
+            --arg linux_url "$LINUX_URL" \
+            --arg linux_sig "$LINUX_SIG" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "darwin-aarch64": { url: $darwin_url, signature: $darwin_sig },
+                "windows-x86_64": { url: $win64_url, signature: $win64_sig },
+                "linux-x86_64": { url: $linux_url, signature: $linux_sig }
+              }
+            }' > latest.json
+
+          echo "Generated latest.json:"
+          cat latest.json
+
+          echo "Uploading latest.json to release $release_id..."
+          curl -sSL \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Content-Type: application/octet-stream" \
+            "https://uploads.github.com/repos/$REPO/releases/$release_id/assets?name=latest.json" \
+            --data-binary @latest.json
+
+          echo "Done."
