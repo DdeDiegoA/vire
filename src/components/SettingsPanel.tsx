@@ -71,7 +71,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       onPointerDown={(e) => e.stopPropagation()}
       style={{
         position: 'absolute',
-        top: 16,
+        top: 48,
         right: 16,
         zIndex: 200,
         width: 340,

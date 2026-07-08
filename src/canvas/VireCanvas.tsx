@@ -263,7 +263,7 @@ export function VireCanvas() {
         onClick={() => setSettingsOpen((v) => !v)}
         onPointerDown={(e) => e.stopPropagation()}
         title="Config AI CLIs"
-        style={{ ...pillButtonStyle, top: 16, right: 16, fontSize: 'clamp(12px, 3.2cqw, 14px)' }}
+        style={{ ...pillButtonStyle, top: 54, right: 16, zIndex: 201, fontSize: 'clamp(12px, 3.2cqw, 14px)' }}
       >
         ⚙
       </button>
