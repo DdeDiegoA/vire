@@ -22,7 +22,11 @@ pub fn open_terminal(
             let _ = on_frame.send(frame);
         });
     }
-    process.spawn(surface_id.clone(), cols, rows, move |frame| {
+    let term = project
+        .get_config("terminal:type")?
+        .filter(|v| v != "auto" && !v.is_empty())
+        .unwrap_or_else(|| std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".into()));
+    process.spawn(surface_id.clone(), cols, rows, term, move |frame| {
         let _ = on_frame.send(frame);
     })?;
     let shell = crate::process::default_shell();

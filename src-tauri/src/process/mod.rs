@@ -40,6 +40,7 @@ impl ProcessManager {
         surface_id: String,
         cols: u16,
         rows: u16,
+        term: String,
         on_frame: impl Fn(TermFrame) + Send + 'static,
     ) -> Result<(), String> {
         let pty_system = native_pty_system();
@@ -53,10 +54,9 @@ impl ProcessManager {
             .map_err(|e| e.to_string())?;
 
         let shell = default_shell();
-        let child = pair
-            .slave
-            .spawn_command(CommandBuilder::new(shell))
-            .map_err(|e| e.to_string())?;
+        let mut cmd = CommandBuilder::new(shell);
+        cmd.env("TERM", &term);
+        let child = pair.slave.spawn_command(cmd).map_err(|e| e.to_string())?;
         drop(pair.slave);
 
         let sink: Sink = Arc::new(Mutex::new(Box::new(on_frame)));

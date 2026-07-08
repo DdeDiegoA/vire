@@ -8,6 +8,7 @@ interface CliConfig {
 }
 
 const CLIS = ['Claude', 'OpenCode', 'Codex', 'Hermes'] as const
+const TERMINAL_TYPES = ['auto', 'xterm-256color', 'xterm', 'screen-256color', 'vt100', 'ansi', 'linux'] as const
 const emptyConfig: CliConfig = { command: '', args: '', env: '' }
 const configKey = (cli: string) => `cli:${cli.toLowerCase()}`
 
@@ -35,6 +36,7 @@ const buttonStyle: React.CSSProperties = {
 
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [configs, setConfigs] = useState<Record<string, CliConfig>>({})
+  const [termType, setTermType] = useState('auto')
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
         entries[cli] = results[i] ? JSON.parse(results[i]!) : { ...emptyConfig }
       })
       if (!cancelled) setConfigs(entries)
+      const termCfg = await invoke<string | null>('get_config', { key: 'terminal:type' })
+      if (!cancelled && termCfg) setTermType(termCfg)
     })()
     return () => {
       cancelled = true
@@ -63,6 +67,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
 
   const save = (cli: string) =>
     invoke('set_config', { key: configKey(cli), valueJson: JSON.stringify(configs[cli] ?? emptyConfig) })
+
+  const saveTermType = (value: string) => {
+    setTermType(value)
+    invoke('set_config', { key: 'terminal:type', valueJson: value })
+  }
 
   return (
     <dialog
@@ -133,6 +142,22 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           </div>
         )
       })}
+      <div style={{ marginTop: 8, paddingTop: 12, borderTop: '0.5px solid var(--glass-block-border)' }}>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: 'clamp(11px, 3cqw, 13px)', marginBottom: 6 }}>Terminal type</div>
+        <select
+          className="v-focus-ring"
+          aria-label="Tipo de terminal"
+          value={termType}
+          onChange={(e) => saveTermType(e.target.value)}
+          style={{ ...inputStyle, width: 'auto', minWidth: 180 }}
+        >
+          {TERMINAL_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t === 'auto' ? 'Auto-detect' : t}
+            </option>
+          ))}
+        </select>
+      </div>
     </dialog>
   )
 }
