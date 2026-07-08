@@ -1,14 +1,31 @@
 import { useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { confirm } from '@tauri-apps/plugin-dialog'
 import { useVireStore } from '../store/useVireStore'
 
 export function VireTopbar() {
   const projects = useVireStore((s) => s.projects)
   const activeId = useVireStore((s) => s.activeId)
+  const boardsByProject = useVireStore((s) => s.boardsByProject)
   const setActive = useVireStore((s) => s.setActive)
   const addProject = useVireStore((s) => s.addProject)
   const renameProject = useVireStore((s) => s.renameProject)
+  const removeProject = useVireStore((s) => s.removeProject)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+
+  const closeProject = async (id: string, name: string) => {
+    const ok = await confirm(`¿Eliminar el proyecto "${name}"? Se borrará todo su contenido de forma permanente.`, {
+      title: 'Eliminar proyecto',
+      kind: 'warning',
+    })
+    if (!ok) return
+    const board = boardsByProject[id]
+    const terminalIds = (board?.blocks ?? []).filter((b) => b.type === 'terminal').map((b) => b.id)
+    await Promise.all(terminalIds.map((surfaceId) => invoke('close_terminal', { surfaceId }).catch(() => {})))
+    await invoke('delete_project', { id }).catch(() => {})
+    removeProject(id)
+  }
 
   const commitRename = () => {
     const name = draft.trim()
@@ -84,8 +101,7 @@ export function VireTopbar() {
             )
           }
           return (
-            <button
-              type="button"
+            <div
               key={p.id}
               onClick={() => setActive(p.id)}
               onDoubleClick={() => {
@@ -94,18 +110,43 @@ export function VireTopbar() {
               }}
               className={`vire-tab${isActive ? ' active' : ''}`}
               style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
                 background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'none',
-                border: 'none',
                 borderRadius: 5,
                 color: isActive ? 'var(--color-text-secondary)' : 'var(--color-text-muted)',
-                padding: '4px 14px',
+                padding: '4px 8px 4px 14px',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 fontSize: 'inherit',
               }}
             >
-              {p.name}
-            </button>
+              <span>{p.name}</span>
+              {isActive && (
+                <button
+                  type="button"
+                  aria-label={`Eliminar proyecto ${p.name}`}
+                  title="Eliminar proyecto (borra todo su contenido)"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void closeProject(p.id, p.name)
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    border: 'none',
+                    borderRadius: 4,
+                    color: 'inherit',
+                    padding: '2px 6px',
+                    cursor: 'pointer',
+                    fontSize: 'clamp(9px, 2.4cqw, 11px)',
+                    lineHeight: 1,
+                  }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           )
         })}
       </div>

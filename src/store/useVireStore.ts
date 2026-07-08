@@ -20,6 +20,7 @@ interface VireStore {
   addProject: () => void
   setActive: (id: string) => void
   renameProject: (id: string, name: string) => void
+  removeProject: (id: string) => void
 
   addBlock: (type: VireBlockType, worldX: number, worldY: number) => string
   updateBlock: (id: string, partial: Partial<Pick<VireBlock, 'x' | 'y' | 'w' | 'h'>>) => void
@@ -62,6 +63,28 @@ export const useVireStore = create<VireStore>()(
         set((s) => ({
           projects: s.projects.map((p) => (p.id === id ? { ...p, name } : p)),
         })),
+
+      removeProject: (id) =>
+        set((s) => {
+          const remaining = s.projects.filter((p) => p.id !== id)
+          const { [id]: _removed, ...boardsByProject } = s.boardsByProject
+          if (remaining.length === 0) {
+            projectSeq += 1
+            const freshId = `project-${projectSeq}`
+            return {
+              projects: [{ id: freshId, name: `Proyecto ${projectSeq}` }],
+              activeId: freshId,
+              boardsByProject: { [freshId]: emptyBoard() },
+              selectedBlockId: null,
+            }
+          }
+          return {
+            projects: remaining,
+            activeId: s.activeId === id ? remaining[0].id : s.activeId,
+            boardsByProject,
+            selectedBlockId: s.activeId === id ? null : s.selectedBlockId,
+          }
+        }),
 
       addBlock: (type, worldX, worldY) => {
         const state = get()

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog'
 import * as monaco from 'monaco-editor'
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
@@ -109,6 +110,13 @@ export function EditorBlock({ id, data, w, h }: { id: string; data: EditorData; 
     updateBlockData(id, { ...data, path: pathInput })
   }
 
+  const browseForFile = async () => {
+    const selected = await openFileDialog({ multiple: false, directory: false })
+    if (!selected || Array.isArray(selected)) return
+    setPathInput(selected)
+    updateBlockData(id, { ...data, path: selected })
+  }
+
   const save = async () => {
     if (!data.path || !editorRef.current) return
     try {
@@ -162,7 +170,7 @@ export function EditorBlock({ id, data, w, h }: { id: string; data: EditorData; 
             padding: '3px 6px',
           }}
         />
-        <button type="button" className="v-focus-ring" onClick={openPath} style={buttonStyle}>Abrir</button>
+        <button type="button" className="v-focus-ring" onClick={browseForFile} style={buttonStyle}>Abrir</button>
         <button type="button" className="v-focus-ring" onClick={save} style={buttonStyle}>Guardar</button>
         {status && <span style={{ fontSize: 'clamp(8px, 2cqw, 11px)', color: 'var(--color-text-muted)' }}>{status}</span>}
       </div>

@@ -161,6 +161,7 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
           type="button"
           className="block-close"
           aria-label={`Cerrar ${block.title}`}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={closeBlock}
           style={{
             width: 'clamp(16px, 5.5cqmin, 22px)',

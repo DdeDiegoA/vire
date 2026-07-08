@@ -157,7 +157,8 @@ export function VireCanvas() {
     if (e.ctrlKey) {
       const anim = zoomAnimRef.current
       if (anim.raf == null) anim.targetZ = camera.z
-      const factor = Math.exp(-e.deltaY * 0.01)
+      const clampedDeltaY = Math.max(-50, Math.min(50, e.deltaY))
+      const factor = Math.exp(-clampedDeltaY * 0.004)
       anim.targetZ = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, anim.targetZ * factor))
       const rect = e.currentTarget.getBoundingClientRect()
       anim.anchorX = e.clientX - rect.left

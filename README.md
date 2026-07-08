@@ -13,6 +13,18 @@ Infinite canvas workspace para desarrollo con IA. Terminales vt100 + agentes IA 
 | Estado | Zustand |
 | Fonts | Inter (UI) + JetBrains Mono (terminal) |
 
+## Instalación (macOS)
+
+La build actual **no está firmada con Apple Developer ID ni notarizada** (pendiente: certificado de pago + secrets en CI). Hasta que esté firmada, macOS Gatekeeper mostrará "Vire.app está dañado y no se puede abrir" al abrir la app descargada. Workaround para desbloquearla:
+
+```bash
+xattr -cr /Applications/Vire.app
+```
+
+O clic-derecho sobre `Vire.app` → Abrir → confirmar en el diálogo. Esto no reemplaza la firma real, solo permite instalar la build de prueba actual.
+
+Setup de firma real (una vez se tenga cuenta Apple Developer Program): agregar los secrets `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` en GitHub (Settings → Secrets → Actions) — `release.yml` ya está preparado para usarlos.
+
 ## Requisitos
 
 - Rust toolchain (rustc 1.77+)

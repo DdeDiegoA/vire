@@ -65,9 +65,6 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
         <button type="button" onClick={reload} style={navBtnStyle(true)}>
           ⟳
         </button>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2a2a2a' }} />
         <input
           className="v-focus-ring"
           aria-label="URL del navegador"

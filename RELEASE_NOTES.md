@@ -17,6 +17,6 @@ Infinite canvas workspace para desarrollo con IA. Terminales, agentes, editor, n
 
 | OS | Archivo |
 |----|---------|
-| macOS | `Vire_0.1.0_aarch64.dmg` (Apple Silicon) |
-| Windows | `Vire_0.1.0_x64.msi` o `Vire_0.1.0_x64-setup.exe` |
-| Linux | `Vire_0.1.0_amd64.AppImage` o `vire_0.1.0_amd64.deb` |
+| macOS | `Vire_0.1.0_aarch64.dmg` (8.4 MB) |
+| Windows | `Vire_0.1.0_x64_en-US.msi` (7.8 MB) o `Vire_0.1.0_x64-setup.exe` (6.3 MB) |
+| Linux | `Vire_0.1.0_amd64.AppImage` (79.4 MB) o `Vire_0.1.0_amd64.deb` (8.4 MB) |
