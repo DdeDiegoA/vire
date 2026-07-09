@@ -84,6 +84,7 @@ export function EditorBlock({ id, data, w, h }: { id: string; data: EditorData; 
     })
     editorRef.current = editor
     return () => editor.dispose()
+    // eslint-disable-next-line react-hooks/exhaustive-deps — w intentional, handled by next effect
   }, [])
 
   useEffect(() => {
