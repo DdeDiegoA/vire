@@ -1,4 +1,4 @@
-export const VIRE_BLOCK_TYPES = ['terminal', 'agent', 'editor', 'pomodoro', 'tasklist', 'browser', 'note'] as const
+export const VIRE_BLOCK_TYPES = ['terminal', 'agent', 'editor', 'pomodoro', 'tasklist', 'browser', 'note', 'sourcecontrol'] as const
 export type VireBlockType = (typeof VIRE_BLOCK_TYPES)[number]
 
 export interface AgentData {
@@ -39,6 +39,8 @@ export interface EditorData {
   path: string
 }
 
+export type SourceControlData = Record<string, never>
+
 export const defaultPomodoroData: PomodoroData = {
   durationSec: 1500,
   remainingSec: 1500,
@@ -59,6 +61,8 @@ export const defaultEditorData: EditorData = { path: '' }
 
 export const defaultAgentData: AgentData = { cli: 'claude' }
 
+export const defaultSourceControlData: SourceControlData = {}
+
 export const defaultDataByType: Record<VireBlockType, unknown> = {
   pomodoro: defaultPomodoroData,
   tasklist: defaultTaskListData,
@@ -67,6 +71,7 @@ export const defaultDataByType: Record<VireBlockType, unknown> = {
   editor: defaultEditorData,
   browser: defaultBrowserData,
   note: defaultNoteData,
+  sourcecontrol: defaultSourceControlData,
 }
 
 export const nameByType: Record<VireBlockType, string> = {
@@ -77,6 +82,7 @@ export const nameByType: Record<VireBlockType, string> = {
   tasklist: 'Tareas',
   browser: 'Browser',
   note: 'Nota',
+  sourcecontrol: 'Git',
 }
 
 export const BLOCK_ICON: Record<VireBlockType, string> = {
@@ -87,6 +93,7 @@ export const BLOCK_ICON: Record<VireBlockType, string> = {
   browser: 'W',
   pomodoro: 'P',
   tasklist: '✓',
+  sourcecontrol: '⎇',
 }
 
 export function remainingMsAt(data: PomodoroData, now: number): number {

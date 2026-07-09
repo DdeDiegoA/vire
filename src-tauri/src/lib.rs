@@ -28,6 +28,11 @@ pub fn run() {
       ipc::read_text_file,
       ipc::write_text_file,
       ipc::run_agent,
+      ipc::git_status,
+      ipc::git_diff,
+      ipc::git_stage,
+      ipc::git_unstage,
+      ipc::git_commit,
     ])
     // Closing the window hides it instead of quitting — terminal sessions
     // (live PTY + vt100 thread in ProcessManager) keep running so reopening
@@ -87,3 +92,4 @@ pub mod process;
 pub mod project;
 pub mod ipc;
 pub mod agent;
+pub mod git;

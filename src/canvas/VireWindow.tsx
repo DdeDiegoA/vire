@@ -14,6 +14,8 @@ import { BrowserBlock } from '../shapes/blocks/BrowserBlock'
 import type { BrowserData } from '../shapes/blockTypes'
 import { EditorBlock } from '../shapes/blocks/EditorBlock'
 import type { EditorData } from '../shapes/blockTypes'
+import { SourceControlBlock } from '../shapes/blocks/SourceControlBlock'
+import type { SourceControlData } from '../shapes/blockTypes'
 import { BLOCK_ICON } from '../shapes/blockTypes'
 
 const MIN_W = 160
@@ -190,6 +192,7 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
         {block.type === 'editor' && <EditorBlock id={block.id} data={block.data as EditorData} w={block.w} h={block.h} />}
         {block.type === 'note' && <NoteBlock id={block.id} data={block.data as NoteData} />}
         {block.type === 'browser' && <BrowserBlock id={block.id} data={block.data as BrowserData} />}
+        {block.type === 'sourcecontrol' && <SourceControlBlock id={block.id} data={block.data as SourceControlData} />}
       </div>
 
       <div

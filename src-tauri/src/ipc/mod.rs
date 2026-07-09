@@ -62,6 +62,7 @@ pub fn close_terminal(process: State<ProcessManager>, project: State<ProjectMana
 pub struct ProjectDto {
     pub id: String,
     pub name: String,
+    pub repo_path: Option<String>,
 }
 
 #[tauri::command]
@@ -69,13 +70,18 @@ pub fn list_projects(state: State<ProjectManager>) -> Result<Vec<ProjectDto>, St
     Ok(state
         .list_projects()?
         .into_iter()
-        .map(|p| ProjectDto { id: p.id, name: p.name })
+        .map(|p| ProjectDto { id: p.id, name: p.name, repo_path: p.repo_path })
         .collect())
 }
 
 #[tauri::command]
-pub fn upsert_project(state: State<ProjectManager>, id: String, name: String) -> Result<(), String> {
-    state.upsert_project(&id, &name)
+pub fn upsert_project(
+    state: State<ProjectManager>,
+    id: String,
+    name: String,
+    repo_path: Option<String>,
+) -> Result<(), String> {
+    state.upsert_project(&id, &name, repo_path.as_deref())
 }
 
 #[tauri::command]
@@ -132,4 +138,29 @@ pub fn write_text_file(path: String, contents: String) -> Result<(), String> {
 #[tauri::command]
 pub fn set_config(state: State<ProjectManager>, key: String, value_json: String) -> Result<(), String> {
     state.set_config(&key, &value_json)
+}
+
+#[tauri::command]
+pub fn git_status(repo_path: String) -> Result<crate::git::GitStatusDto, String> {
+    crate::git::status(&repo_path)
+}
+
+#[tauri::command]
+pub fn git_diff(repo_path: String, file: String, staged: bool, untracked: bool) -> Result<String, String> {
+    crate::git::diff(&repo_path, &file, staged, untracked)
+}
+
+#[tauri::command]
+pub fn git_stage(repo_path: String, files: Vec<String>) -> Result<(), String> {
+    crate::git::stage(&repo_path, &files)
+}
+
+#[tauri::command]
+pub fn git_unstage(repo_path: String, files: Vec<String>) -> Result<(), String> {
+    crate::git::unstage(&repo_path, &files)
+}
+
+#[tauri::command]
+pub fn git_commit(repo_path: String, message: String) -> Result<(), String> {
+    crate::git::commit(&repo_path, &message)
 }

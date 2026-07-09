@@ -9,6 +9,7 @@ export { emptyBoard, type Board, type Camera, type VireBlock }
 export interface VireProject {
   id: string
   name: string
+  repoPath?: string
 }
 
 interface VireStore {
@@ -21,6 +22,7 @@ interface VireStore {
   setActive: (id: string) => void
   renameProject: (id: string, name: string) => void
   removeProject: (id: string) => void
+  setRepoPath: (id: string, repoPath: string) => void
 
   addBlock: (type: VireBlockType, worldX: number, worldY: number) => string
   updateBlock: (id: string, partial: Partial<Pick<VireBlock, 'x' | 'y' | 'w' | 'h'>>) => void
@@ -62,6 +64,11 @@ export const useVireStore = create<VireStore>()(
       renameProject: (id, name) =>
         set((s) => ({
           projects: s.projects.map((p) => (p.id === id ? { ...p, name } : p)),
+        })),
+
+      setRepoPath: (id, repoPath) =>
+        set((s) => ({
+          projects: s.projects.map((p) => (p.id === id ? { ...p, repoPath } : p)),
         })),
 
       removeProject: (id) =>

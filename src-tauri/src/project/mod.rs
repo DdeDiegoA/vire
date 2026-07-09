@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 pub struct ProjectRow {
     pub id: String,
     pub name: String,
+    pub repo_path: Option<String>,
 }
 
 pub struct BoardRow {
@@ -29,6 +30,7 @@ impl ProjectManager {
             "CREATE TABLE IF NOT EXISTS projects (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
+                repo_path TEXT,
                 created_at INTEGER NOT NULL,
                 updated_at INTEGER NOT NULL
             );
@@ -52,29 +54,34 @@ impl ProjectManager {
             );",
         )
         .map_err(|e| e.to_string())?;
+        // Migration guard for DBs created before repo_path existed — CREATE
+        // TABLE IF NOT EXISTS above only shapes fresh databases. Ignore the
+        // error when the column is already there (no schema-version table
+        // to check against instead).
+        let _ = conn.execute("ALTER TABLE projects ADD COLUMN repo_path TEXT", []);
         Ok(Self { conn: Mutex::new(conn) })
     }
 
     pub fn list_projects(&self) -> Result<Vec<ProjectRow>, String> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn
-            .prepare("SELECT id, name FROM projects ORDER BY created_at")
+            .prepare("SELECT id, name, repo_path FROM projects ORDER BY created_at")
             .map_err(|e| e.to_string())?;
         let rows = stmt
             .query_map([], |row| {
-                Ok(ProjectRow { id: row.get(0)?, name: row.get(1)? })
+                Ok(ProjectRow { id: row.get(0)?, name: row.get(1)?, repo_path: row.get(2)? })
             })
             .map_err(|e| e.to_string())?;
         rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
     }
 
-    pub fn upsert_project(&self, id: &str, name: &str) -> Result<(), String> {
+    pub fn upsert_project(&self, id: &str, name: &str, repo_path: Option<&str>) -> Result<(), String> {
         let conn = self.conn.lock().unwrap();
         let ts = now();
         conn.execute(
-            "INSERT INTO projects (id, name, created_at, updated_at) VALUES (?1, ?2, ?3, ?3)
-             ON CONFLICT(id) DO UPDATE SET name = excluded.name, updated_at = excluded.updated_at",
-            params![id, name, ts],
+            "INSERT INTO projects (id, name, repo_path, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?4)
+             ON CONFLICT(id) DO UPDATE SET name = excluded.name, repo_path = excluded.repo_path, updated_at = excluded.updated_at",
+            params![id, name, repo_path, ts],
         )
         .map_err(|e| e.to_string())?;
         Ok(())

@@ -2,9 +2,16 @@ import { invoke } from '@tauri-apps/api/core'
 import type { PersistStorage, StorageValue } from 'zustand/middleware'
 import { emptyBoard, type Board } from './boardTypes'
 
+interface StoredProject {
+  id: string
+  name: string
+  repoPath?: string
+}
+
 interface ProjectDto {
   id: string
   name: string
+  repo_path: string | null
 }
 
 interface BoardDto {
@@ -16,14 +23,14 @@ const DEBOUNCE_MS = 500
 
 async function writeState(value: StorageValue<unknown>) {
   const { projects, activeId, boardsByProject, selectedBlockId } = value.state as {
-    projects: ProjectDto[]
+    projects: StoredProject[]
     activeId: string
     boardsByProject: Record<string, Board>
     selectedBlockId: string | null
   }
 
   await Promise.all([
-    ...projects.map((p) => invoke('upsert_project', { id: p.id, name: p.name })),
+    ...projects.map((p) => invoke('upsert_project', { id: p.id, name: p.name, repoPath: p.repoPath ?? null })),
     ...Object.entries(boardsByProject).map(([projectId, board]) => {
       const { camera, ...rest } = board
       return invoke('save_board', {
@@ -62,7 +69,7 @@ export function createTauriStorage<S>(): PersistStorage<S> {
       ])
 
       const state = {
-        projects,
+        projects: projects.map((p) => ({ id: p.id, name: p.name, repoPath: p.repo_path ?? undefined })),
         activeId: activeIdRaw ? JSON.parse(activeIdRaw) : projects[0].id,
         boardsByProject,
         selectedBlockId: selectedRaw ? JSON.parse(selectedRaw) : null,
