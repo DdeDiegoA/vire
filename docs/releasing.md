@@ -1,5 +1,24 @@
 # Releasing Vire
 
+## Setup de firma del updater (una sola vez por repo)
+
+El auto-updater (Tauri plugin `updater`) exige que cada binario venga firmado con una key
+minisign. Sin esto, `latest.json` sale con `signature: ""` y el updater rechaza la actualización
+en silencio.
+
+1. Key privada vive en `~/.tauri/vire.key` (encriptada con password). **Nunca se commitea.**
+2. Pubkey va en `src-tauri/tauri.conf.json` → `plugins.updater.pubkey`.
+3. En GitHub → repo → Settings → Secrets and variables → Actions, deben existir:
+   - `TAURI_SIGNING_PRIVATE_KEY` = contenido completo de `~/.tauri/vire.key`
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` = password de esa key
+4. `release.yml` job `build` los pasa como env al step `tauri-action`, que firma cada binario y
+   genera los `.sig` que `updater-json` sube dentro de `latest.json`.
+
+Si algún día se regenera la key (`npx tauri signer generate -w ~/.tauri/vire.key`), hay que
+actualizar el pubkey en `tauri.conf.json` **y** los dos secrets en GitHub, o los usuarios con la
+versión anterior dejan de poder auto-actualizar (van a necesitar bajar la nueva versión a mano
+una vez).
+
 ## Pre-release checklist
 
 Antes de crear un tag de release, ejecutar localmente **en orden**:
