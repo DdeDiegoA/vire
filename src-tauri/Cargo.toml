@@ -1,6 +1,6 @@
 [package]
 name = "vire"
-version = "0.1.3"
+version = "0.1.4"
 description = "Vire — Infinite Canvas Workspace"
 authors = ["Diego Arenas"]
 license = "MIT"
