@@ -53,50 +53,50 @@ export function VireContextMenu({
         fontSize: 'clamp(11px, 3cqw, 13px)',
       }}
     >
-      {VIRE_BLOCK_TYPES.map((type) => (
-        <button
-          key={type}
-          type="button"
-          className="ctx-item"
-          role="menuitem"
-          onClick={() => onSelect(type)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            width: '100%',
-            background: 'none',
-            border: 'none',
-            color: 'var(--color-text-primary)',
-            borderRadius: 5,
-            padding: '4px 8px',
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            fontSize: 'inherit',
-            textAlign: 'left',
-          }}
-        >
-          <span
+      {VIRE_BLOCK_TYPES.map((type) => {
+        const Icon = BLOCK_ICON[type]
+        return (
+          <button
+            key={type}
+            type="button"
+            className="ctx-item"
+            role="menuitem"
+            onClick={() => onSelect(type)}
             style={{
-              width: 16,
-              height: 16,
-              flexShrink: 0,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              borderRadius: 'var(--radius-sm)',
-              background: 'rgba(255, 255, 255, 0.06)',
-              color: 'var(--color-accent)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 'clamp(9px, 2.5cqw, 10px)',
-              fontWeight: 600,
+              gap: 8,
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              color: 'var(--color-text-primary)',
+              borderRadius: 5,
+              padding: '4px 8px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: 'inherit',
+              textAlign: 'left',
             }}
           >
-            {BLOCK_ICON[type]}
-          </span>
-          {nameByType[type]}
-        </button>
-      ))}
+            <span
+              style={{
+                width: 16,
+                height: 16,
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: 'var(--color-accent)',
+              }}
+            >
+              <Icon size={13} weight="Outline" />
+            </span>
+            {nameByType[type]}
+          </button>
+        )
+      })}
     </div>
   )
 }

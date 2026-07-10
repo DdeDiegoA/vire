@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
+import { X } from 'reicon-react'
 
 interface CliConfig {
   command: string
@@ -102,9 +103,9 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Cerrar configuración"
-          style={{ color: 'var(--color-text-muted)', cursor: 'pointer', fontSize: 'clamp(12px, 3.2cqw, 14px)', background: 'none', border: 'none' }}
+          style={{ color: 'var(--color-text-muted)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', background: 'none', border: 'none' }}
         >
-          ✕
+          <X size={14} weight="Outline" />
         </button>
       </div>
       {CLIS.map((cli) => {

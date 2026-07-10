@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ArrowLeft, ArrowRight, Refresh2 } from 'reicon-react'
 import { useVireStore } from '../../store/useVireStore'
 import type { BrowserData } from '../blockTypes'
 
@@ -15,6 +16,8 @@ const navBtnStyle = (enabled: boolean): React.CSSProperties => ({
   borderRadius: 6,
   color: enabled ? '#ddd' : 'var(--color-text-muted)',
   padding: '4px 8px',
+  display: 'inline-flex',
+  alignItems: 'center',
   cursor: enabled ? 'pointer' : 'default',
 })
 
@@ -52,7 +55,7 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
     <div onPointerDown={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ display: 'flex', gap: 6, padding: 8, borderBottom: '1px solid var(--color-divider)' }}>
         <button type="button" onClick={goBack} disabled={data.index === 0} style={navBtnStyle(data.index > 0)}>
-          ←
+          <ArrowLeft size={13} weight="Outline" />
         </button>
         <button
           type="button"
@@ -60,10 +63,10 @@ export function BrowserBlock({ id, data }: { id: string; data: BrowserData }) {
           disabled={data.index >= data.history.length - 1}
           style={navBtnStyle(data.index < data.history.length - 1)}
         >
-          →
+          <ArrowRight size={13} weight="Outline" />
         </button>
         <button type="button" onClick={reload} style={navBtnStyle(true)}>
-          ⟳
+          <Refresh2 size={13} weight="Outline" />
         </button>
         <input
           className="v-focus-ring"

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
+import { Flask, X, Plus } from 'reicon-react'
 import { useVireStore } from '../store/useVireStore'
 
 export function VireTopbar() {
@@ -60,15 +61,15 @@ export function VireTopbar() {
         </span>
         <span
           style={{
-            fontSize: 'clamp(9px, 2.5cqw, 10px)',
-            fontFamily: 'var(--font-mono)',
+            display: 'inline-flex',
+            alignItems: 'center',
             color: 'var(--color-text-secondary)',
             border: '1px solid var(--color-border)',
             borderRadius: 'var(--radius-pill)',
-            padding: '2px 10px',
+            padding: '4px 8px',
           }}
         >
-          β
+          <Flask size={12} weight="Outline" />
         </span>
       </div>
 
@@ -139,11 +140,11 @@ export function VireTopbar() {
                     color: 'inherit',
                     padding: '2px 6px',
                     cursor: 'pointer',
-                    fontSize: 'clamp(9px, 2.4cqw, 11px)',
-                    lineHeight: 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
                   }}
                 >
-                  ✕
+                  <X size={11} weight="Outline" />
                 </button>
               )}
             </div>
@@ -163,10 +164,11 @@ export function VireTopbar() {
           padding: '2px 8px',
           color: 'var(--color-text-secondary)',
           cursor: 'pointer',
-          fontSize: 'clamp(14px, 3.8cqw, 16px)',
+          display: 'inline-flex',
+          alignItems: 'center',
         }}
       >
-        +
+        <Plus size={15} weight="Outline" />
       </button>
     </div>
   )

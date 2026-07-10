@@ -151,12 +151,12 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
             borderRadius: 'var(--radius-sm)',
             background: 'rgba(255, 255, 255, 0.06)',
             color: 'var(--color-accent)',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'clamp(8px, 2.5cqmin, 10px)',
-            fontWeight: 600,
           } as React.CSSProperties}
         >
-          {BLOCK_ICON[block.type] ?? block.type[0]?.toUpperCase()}
+          {(() => {
+            const Icon = BLOCK_ICON[block.type]
+            return Icon ? <Icon size={13} weight="Outline" /> : block.type[0]?.toUpperCase()
+          })()}
         </div>
         <span style={{ flex: 1 }}>{block.title}</span>
         <button

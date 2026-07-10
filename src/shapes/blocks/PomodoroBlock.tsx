@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Timer2 } from 'reicon-react'
 import { useVireStore } from '../../store/useVireStore'
 import { remainingMsAt, type PomodoroData } from '../blockTypes'
 
@@ -96,17 +97,25 @@ export function PomodoroBlock({ id, data }: { id: string; data: PomodoroData }) 
             position: 'absolute',
             inset: 0,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 'clamp(16px, 11cqw, 32px)',
+            gap: 4,
             color: 'var(--color-accent)',
-            fontWeight: 500,
-            letterSpacing: 1,
-            textShadow: '0 0 16px rgba(231,197,154,.12)',
           }}
         >
-          {formatMs(nowMs)}
+          <Timer2 size={16} weight="Outline" style={{ opacity: 0.6 }} />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'clamp(16px, 11cqw, 32px)',
+              fontWeight: 500,
+              letterSpacing: 1,
+              textShadow: '0 0 16px rgba(231,197,154,.12)',
+            }}
+          >
+            {formatMs(nowMs)}
+          </span>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6 }}>

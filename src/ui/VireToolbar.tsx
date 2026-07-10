@@ -34,6 +34,7 @@ export function VireToolbar() {
     >
       {VIRE_BLOCK_TYPES.map((blockType) => {
         const isActive = activeType === blockType
+        const Icon = BLOCK_ICON[blockType]
         return (
           <button
             type="button"
@@ -51,11 +52,10 @@ export function VireToolbar() {
               borderRadius: 'var(--radius-pill)',
               color: isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
               cursor: 'pointer',
-              fontSize: 'clamp(12px, 3.2cqw, 14px)',
               transition: 'background 0.15s',
             }}
           >
-            {BLOCK_ICON[blockType]}
+            <Icon size={17} weight="Outline" />
           </button>
         )
       })}

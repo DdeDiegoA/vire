@@ -1,3 +1,6 @@
+import type { IconComponent } from 'reicon-react'
+import { TerminalSquare, Cpu, Code2, Stickynote2, Globe, Timer2, ListCheck, BranchUp } from 'reicon-react'
+
 export const VIRE_BLOCK_TYPES = ['terminal', 'agent', 'editor', 'pomodoro', 'tasklist', 'browser', 'note', 'sourcecontrol'] as const
 export type VireBlockType = (typeof VIRE_BLOCK_TYPES)[number]
 
@@ -85,15 +88,15 @@ export const nameByType: Record<VireBlockType, string> = {
   sourcecontrol: 'Git',
 }
 
-export const BLOCK_ICON: Record<VireBlockType, string> = {
-  terminal: '>',
-  agent: 'AI',
-  editor: '</>',
-  note: 'N',
-  browser: 'W',
-  pomodoro: 'P',
-  tasklist: '✓',
-  sourcecontrol: '⎇',
+export const BLOCK_ICON: Record<VireBlockType, IconComponent> = {
+  terminal: TerminalSquare,
+  agent: Cpu,
+  editor: Code2,
+  note: Stickynote2,
+  browser: Globe,
+  pomodoro: Timer2,
+  tasklist: ListCheck,
+  sourcecontrol: BranchUp,
 }
 
 export function remainingMsAt(data: PomodoroData, now: number): number {

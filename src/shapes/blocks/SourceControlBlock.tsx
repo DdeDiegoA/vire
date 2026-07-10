@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open as openDirDialog } from '@tauri-apps/plugin-dialog'
+import { BranchUp, Plus, Minus } from 'reicon-react'
 import { useVireStore } from '../../store/useVireStore'
 import type { SourceControlData } from '../blockTypes'
 
@@ -192,9 +193,9 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
           if (opts.staged) unstage(f.path)
           else stage(f.path)
         }}
-        style={{ ...buttonStyle, padding: '1px 6px' }}
+        style={{ ...buttonStyle, padding: '1px 6px', display: 'inline-flex', alignItems: 'center' }}
       >
-        {opts.staged ? '−' : '+'}
+        {opts.staged ? <Minus size={11} weight="Outline" /> : <Plus size={11} weight="Outline" />}
       </button>
     </div>
   )
@@ -216,8 +217,17 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
           borderBottom: '1px solid var(--color-divider)',
         }}
       >
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'clamp(9px, 2.2cqw, 11px)', color: 'var(--color-accent)' }}>
-          ⎇ {status?.branch ?? '...'}
+        <span
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'clamp(9px, 2.2cqw, 11px)',
+            color: 'var(--color-accent)',
+          }}
+        >
+          <BranchUp size={12} weight="Outline" /> {status?.branch ?? '...'}
         </span>
         <span style={{ flex: 1 }} />
         <button type="button" className="v-focus-ring" onClick={refresh} style={buttonStyle}>
