@@ -25,6 +25,13 @@ export interface Board {
   topZ: number
 }
 
+export interface Worktree {
+  id: string
+  projectId: string
+  path: string
+  branch: string
+}
+
 const defaultCamera: Camera = { x: 0, y: 0, z: 1 }
 
 export function emptyBoard(): Board {

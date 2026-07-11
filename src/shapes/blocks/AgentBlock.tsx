@@ -53,6 +53,7 @@ function EventCard({ raw }: { raw: unknown }) {
 
 export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
   const updateBlockData = useVireStore((s) => s.updateBlockData)
+  const repoPath = useVireStore((s) => s.projects.find((p) => p.id === s.activeId)?.repoPath)
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
   const [running, setRunning] = useState(false)
@@ -80,7 +81,7 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
       await invoke('run_agent', {
         cli: data.cli,
         prompt: text,
-        cwd: '.',
+        cwd: data.cwd ?? repoPath ?? '.',
         sessionId: data.sessionId ?? null,
         onEvent: channel,
       })

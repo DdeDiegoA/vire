@@ -38,6 +38,8 @@ const buttonStyle: React.CSSProperties = {
 export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [configs, setConfigs] = useState<Record<string, CliConfig>>({})
   const [termType, setTermType] = useState('auto')
+  const [shellPath, setShellPath] = useState('auto')
+  const [shells, setShells] = useState<string[]>([])
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -57,6 +59,10 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       if (!cancelled) setConfigs(entries)
       const termCfg = await invoke<string | null>('get_config', { key: 'terminal:type' })
       if (!cancelled && termCfg) setTermType(termCfg)
+      const shellCfg = await invoke<string | null>('get_config', { key: 'terminal:shell' })
+      if (!cancelled && shellCfg) setShellPath(shellCfg)
+      const shellList = await invoke<string[]>('list_shells')
+      if (!cancelled) setShells(shellList)
     })()
     return () => {
       cancelled = true
@@ -72,6 +78,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const saveTermType = (value: string) => {
     setTermType(value)
     invoke('set_config', { key: 'terminal:type', valueJson: value })
+  }
+
+  const saveShellPath = (value: string) => {
+    setShellPath(value)
+    invoke('set_config', { key: 'terminal:shell', valueJson: value })
   }
 
   return (
@@ -155,6 +166,23 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
           {TERMINAL_TYPES.map((t) => (
             <option key={t} value={t}>
               {t === 'auto' ? 'Auto-detect' : t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <div style={{ color: 'var(--color-text-secondary)', fontSize: 'clamp(11px, 3cqw, 13px)', marginBottom: 6 }}>Shell</div>
+        <select
+          className="v-focus-ring"
+          aria-label="Shell del sistema"
+          value={shellPath}
+          onChange={(e) => saveShellPath(e.target.value)}
+          style={{ ...inputStyle, width: 'auto', minWidth: 180 }}
+        >
+          <option value="auto">Auto (SHELL del sistema)</option>
+          {shells.map((s) => (
+            <option key={s} value={s}>
+              {s}
             </option>
           ))}
         </select>

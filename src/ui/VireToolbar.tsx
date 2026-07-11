@@ -1,11 +1,11 @@
-import { useVireStore } from '../store/useVireStore'
+import { useActiveBoard, useVireStore } from '../store/useVireStore'
 import { VIRE_BLOCK_TYPES, BLOCK_ICON, nameByType, type VireBlockType } from '../shapes/blockTypes'
 
 export function VireToolbar() {
   const addBlock = useVireStore((s) => s.addBlock)
   const selectBlock = useVireStore((s) => s.selectBlock)
   const selectedBlockId = useVireStore((s) => s.selectedBlockId)
-  const board = useVireStore((s) => s.boardsByProject[s.activeId])
+  const board = useActiveBoard()
   const activeType = board?.blocks.find((b) => b.id === selectedBlockId)?.type ?? null
 
   const handleAdd = (blockType: VireBlockType) => {

@@ -18,6 +18,7 @@ pub fn run() {
       ipc::terminal_input,
       ipc::resize_terminal,
       ipc::close_terminal,
+      ipc::list_shells,
       ipc::list_projects,
       ipc::upsert_project,
       ipc::delete_project,
@@ -33,9 +34,12 @@ pub fn run() {
       ipc::git_stage,
       ipc::git_unstage,
       ipc::git_commit,
+      ipc::list_worktrees,
+      ipc::create_worktree,
+      ipc::remove_worktree,
     ])
     // Closing the window hides it instead of quitting — terminal sessions
-    // (live PTY + vt100 thread in ProcessManager) keep running so reopening
+    // (live PTY in ProcessManager) keep running so reopening
     // the window resumes them exactly where they were left. Only the tray's
     // "Salir" does a real quit (kills every session first).
     .on_window_event(|window, event| {
@@ -87,7 +91,6 @@ pub fn run() {
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
-pub mod terminal;
 pub mod process;
 pub mod project;
 pub mod ipc;

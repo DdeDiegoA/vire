@@ -136,7 +136,9 @@ export function VireCanvas() {
 
   const stepZoom = () => {
     const anim = zoomAnimRef.current
-    const board = useVireStore.getState().boardsByProject[useVireStore.getState().activeId]
+    const s = useVireStore.getState()
+    const owner = s.activeWorktreeId[s.activeId] ?? s.activeId
+    const board = s.boardsByOwner[owner]
     const cam = board?.camera ?? { x: 0, y: 0, z: 1 }
     const diff = anim.targetZ - cam.z
     const newZ = Math.abs(diff) < 0.001 ? anim.targetZ : cam.z + diff * 0.25

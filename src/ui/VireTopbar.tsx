@@ -1,19 +1,22 @@
 import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { confirm } from '@tauri-apps/plugin-dialog'
-import { Flask, X, Plus } from 'reicon-react'
+import { Flask, X, Plus, ChevronDown } from 'reicon-react'
 import { useVireStore } from '../store/useVireStore'
+import { WorktreeDropdown } from './WorktreeDropdown'
 
 export function VireTopbar() {
   const projects = useVireStore((s) => s.projects)
   const activeId = useVireStore((s) => s.activeId)
-  const boardsByProject = useVireStore((s) => s.boardsByProject)
+  const boardsByOwner = useVireStore((s) => s.boardsByOwner)
+  const worktreesByProject = useVireStore((s) => s.worktreesByProject)
   const setActive = useVireStore((s) => s.setActive)
   const addProject = useVireStore((s) => s.addProject)
   const renameProject = useVireStore((s) => s.renameProject)
   const removeProject = useVireStore((s) => s.removeProject)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [worktreeMenuFor, setWorktreeMenuFor] = useState<string | null>(null)
 
   const closeProject = async (id: string, name: string) => {
     const ok = await confirm(`¿Eliminar el proyecto "${name}"? Se borrará todo su contenido de forma permanente.`, {
@@ -21,8 +24,10 @@ export function VireTopbar() {
       kind: 'warning',
     })
     if (!ok) return
-    const board = boardsByProject[id]
-    const terminalIds = (board?.blocks ?? []).filter((b) => b.type === 'terminal').map((b) => b.id)
+    const ownerIds = [id, ...(worktreesByProject[id] ?? []).map((w) => w.id)]
+    const terminalIds = ownerIds.flatMap((ownerId) =>
+      (boardsByOwner[ownerId]?.blocks ?? []).filter((b) => b.type === 'terminal').map((b) => b.id),
+    )
     await Promise.all(terminalIds.map((surfaceId) => invoke('close_terminal', { surfaceId }).catch(() => {})))
     await invoke('delete_project', { id }).catch(() => {})
     removeProject(id)
@@ -111,6 +116,7 @@ export function VireTopbar() {
               }}
               className={`vire-tab${isActive ? ' active' : ''}`}
               style={{
+                position: 'relative',
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 8,
@@ -124,6 +130,31 @@ export function VireTopbar() {
               }}
             >
               <span>{p.name}</span>
+              {isActive && p.repoPath && (
+                <button
+                  type="button"
+                  aria-label="Worktrees"
+                  title="Worktrees"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setWorktreeMenuFor(worktreeMenuFor === p.id ? null : p.id)
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'inherit',
+                    padding: 0,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <ChevronDown size={11} weight="Outline" />
+                </button>
+              )}
+              {isActive && worktreeMenuFor === p.id && (
+                <WorktreeDropdown projectId={p.id} onClose={() => setWorktreeMenuFor(null)} />
+              )}
               {isActive && (
                 <button
                   type="button"

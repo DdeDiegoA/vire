@@ -7,6 +7,11 @@ export type VireBlockType = (typeof VIRE_BLOCK_TYPES)[number]
 export interface AgentData {
   cli: 'claude' | 'opencode'
   sessionId?: string
+  cwd?: string
+}
+
+export interface TerminalData {
+  cwd?: string
 }
 
 export interface PomodoroData {
@@ -66,10 +71,12 @@ export const defaultAgentData: AgentData = { cli: 'claude' }
 
 export const defaultSourceControlData: SourceControlData = {}
 
+export const defaultTerminalData: TerminalData = {}
+
 export const defaultDataByType: Record<VireBlockType, unknown> = {
   pomodoro: defaultPomodoroData,
   tasklist: defaultTaskListData,
-  terminal: {},
+  terminal: defaultTerminalData,
   agent: defaultAgentData,
   editor: defaultEditorData,
   browser: defaultBrowserData,

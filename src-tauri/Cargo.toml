@@ -27,15 +27,14 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-dialog = "2"
-vt100 = "0.15"
 portable-pty = "0.8"
 rusqlite = { version = "0.31", features = ["bundled"] }
-# ponytail: vt100 (pure VT parser/grid, no PTY) + portable-pty (cross-OS PTY,
-# wezterm's crate) instead of alacritty_terminal — alacritty_terminal 0.24.2's
-# bundled PTY layer (rustix-openpty) has its own broken internal dependency
-# resolution (two incompatible rustix majors, AsFd trait mismatch inside the
-# crate itself) unrelated to Vire's code. vt100+portable-pty is the smaller,
-# cleanly-resolving pairing for the same job.
+# ponytail: portable-pty (wezterm's cross-OS PTY crate) instead of
+# alacritty_terminal — alacritty_terminal 0.24.2's bundled PTY layer
+# (rustix-openpty) has its own broken internal dependency resolution (two
+# incompatible rustix majors, AsFd trait mismatch inside the crate itself)
+# unrelated to Vire's code. vt100 (pure VT parser) was dropped once the
+# frontend moved to xterm.js, which parses the raw byte stream itself.
 # DECISION (2026-07-05): libghostty-vt evaluated and rejected for now — its
 # build.zig requires exactly zig 0.15.2, but zig 0.15.2's own compiler fails
 # to link natively on macOS 26 (Tahoe): "undefined symbol: _abort" etc. even

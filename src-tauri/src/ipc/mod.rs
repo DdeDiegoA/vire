@@ -5,8 +5,10 @@ use tauri::{ipc::Channel, State};
 
 // Opens a terminal: if a session for this surface_id is already running
 // (e.g. reopening a project after switching away — the block unmounted but
-// the PTY/vt100 thread kept running), reattaches and gets an immediate
-// snapshot. Otherwise spawns a fresh shell. Frontend never has to know which.
+// the PTY thread kept running), reattaches and replays buffered scrollback.
+// Otherwise spawns a fresh shell. Frontend never has to know which. Raw PTY
+// bytes stream through untouched — xterm.js on the frontend does the vt100
+// parsing, not this backend.
 #[tauri::command]
 pub fn open_terminal(
     process: State<ProcessManager>,
@@ -15,22 +17,35 @@ pub fn open_terminal(
     project_id: String,
     cols: u16,
     rows: u16,
-    on_frame: Channel<crate::terminal::TermFrame>,
+    on_data: Channel<Vec<u8>>,
+    cwd_override: Option<String>,
 ) -> Result<(), String> {
     if process.exists(&surface_id) {
-        return process.attach(&surface_id, move |frame| {
-            let _ = on_frame.send(frame);
+        return process.attach(&surface_id, move |bytes| {
+            let _ = on_data.send(bytes.to_vec());
         });
     }
     let term = project
         .get_config("terminal:type")?
         .filter(|v| v != "auto" && !v.is_empty())
         .unwrap_or_else(|| std::env::var("TERM").unwrap_or_else(|_| "xterm-256color".into()));
-    process.spawn(surface_id.clone(), cols, rows, term, move |frame| {
-        let _ = on_frame.send(frame);
+    let shell = project
+        .get_config("terminal:shell")?
+        .filter(|v| v != "auto" && !v.is_empty())
+        .unwrap_or_else(crate::process::default_shell);
+    let cwd = match cwd_override {
+        Some(c) => Some(c),
+        None => project.get_repo_path(&project_id)?,
+    };
+    process.spawn(surface_id.clone(), cols, rows, term, shell.clone(), cwd.clone(), move |bytes| {
+        let _ = on_data.send(bytes.to_vec());
     })?;
-    let shell = crate::process::default_shell();
-    project.insert_terminal(&surface_id, &project_id, &surface_id, None, &shell)
+    project.insert_terminal(&surface_id, &project_id, &surface_id, cwd.as_deref(), &shell)
+}
+
+#[tauri::command]
+pub fn list_shells() -> Vec<String> {
+    crate::process::list_shells()
 }
 
 #[tauri::command]
@@ -163,4 +178,54 @@ pub fn git_unstage(repo_path: String, files: Vec<String>) -> Result<(), String> 
 #[tauri::command]
 pub fn git_commit(repo_path: String, message: String) -> Result<(), String> {
     crate::git::commit(&repo_path, &message)
+}
+
+#[derive(serde::Serialize)]
+pub struct WorktreeDto {
+    pub id: String,
+    pub project_id: String,
+    pub path: String,
+    pub branch: String,
+}
+
+#[tauri::command]
+pub fn list_worktrees(state: State<ProjectManager>, project_id: String) -> Result<Vec<WorktreeDto>, String> {
+    Ok(state
+        .list_worktrees(&project_id)?
+        .into_iter()
+        .map(|w| WorktreeDto { id: w.id, project_id: w.project_id, path: w.path, branch: w.branch })
+        .collect())
+}
+
+#[tauri::command]
+pub fn create_worktree(
+    state: State<ProjectManager>,
+    project_id: String,
+    branch: String,
+    base: Option<String>,
+) -> Result<WorktreeDto, String> {
+    let repo_path = state
+        .get_repo_path(&project_id)?
+        .ok_or("project has no repo_path")?;
+    let path = crate::git::worktree_add(&repo_path, &branch, base.as_deref())?;
+    let id = format!("worktree-{}", uuid_like());
+    state.insert_worktree(&id, &project_id, &path, &branch)?;
+    Ok(WorktreeDto { id, project_id, path, branch })
+}
+
+#[tauri::command]
+pub fn remove_worktree(state: State<ProjectManager>, id: String, project_id: String, path: String, force: bool) -> Result<(), String> {
+    let repo_path = state
+        .get_repo_path(&project_id)?
+        .ok_or("project has no repo_path")?;
+    crate::git::worktree_remove(&repo_path, &path, force)?;
+    state.delete_worktree(&id)
+}
+
+fn uuid_like() -> String {
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    format!("{ts:x}")
 }

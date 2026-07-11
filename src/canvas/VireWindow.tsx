@@ -8,6 +8,7 @@ import type { TaskListData } from '../shapes/blockTypes'
 import { AgentBlock } from '../shapes/blocks/AgentBlock'
 import type { AgentData } from '../shapes/blockTypes'
 import { TerminalBlock } from '../shapes/blocks/TerminalBlock'
+import type { TerminalData } from '../shapes/blockTypes'
 import { NoteBlock } from '../shapes/blocks/NoteBlock'
 import type { NoteData } from '../shapes/blockTypes'
 import { BrowserBlock } from '../shapes/blocks/BrowserBlock'
@@ -187,7 +188,7 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
       <div style={{ flex: 1, overflow: 'auto' }}>
         {block.type === 'pomodoro' && <PomodoroBlock id={block.id} data={block.data as PomodoroData} />}
         {block.type === 'tasklist' && <TaskListBlock id={block.id} data={block.data as TaskListData} />}
-        {block.type === 'terminal' && <TerminalBlock id={block.id} zoom={zoom} />}
+        {block.type === 'terminal' && <TerminalBlock id={block.id} zoom={zoom} data={block.data as TerminalData} />}
         {block.type === 'agent' && <AgentBlock id={block.id} data={block.data as AgentData} />}
         {block.type === 'editor' && <EditorBlock id={block.id} data={block.data as EditorData} w={block.w} h={block.h} />}
         {block.type === 'note' && <NoteBlock id={block.id} data={block.data as NoteData} />}
