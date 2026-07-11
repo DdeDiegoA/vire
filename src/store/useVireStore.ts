@@ -193,7 +193,7 @@ export const useVireStore = create<VireStore>()(
     }),
     {
       name: 'vire-boards',
-      version: 1,
+      version: 2,
       storage: createTauriStorage(),
       migrate: (persisted, version) => {
         const state = persisted as VireStore
@@ -201,6 +201,11 @@ export const useVireStore = create<VireStore>()(
           for (const board of Object.values(state.boardsByProject ?? {})) {
             board.topZ = Math.max(0, ...board.blocks.map((b) => b.z ?? 0))
             for (const b of board.blocks) b.z = b.z ?? 0
+          }
+        }
+        if (version < 2) {
+          for (const project of state.projects ?? []) {
+            project.repoPath = project.repoPath ?? undefined
           }
         }
         return state
