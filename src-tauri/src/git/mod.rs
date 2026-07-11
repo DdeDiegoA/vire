@@ -115,3 +115,61 @@ pub fn commit(repo_path: &str, message: &str) -> Result<(), String> {
     run(repo_path, &["commit", "-m", message])?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn init_repo(name: &str) -> String {
+        let dir = std::env::temp_dir().join(format!("vire-git-test-{}-{}", std::process::id(), name));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.to_str().unwrap().to_string();
+        run(&path, &["init", "-q"]).unwrap();
+        run(&path, &["config", "user.email", "test@vire.local"]).unwrap();
+        run(&path, &["config", "user.name", "Vire Test"]).unwrap();
+        path
+    }
+
+    #[test]
+    fn status_stage_commit_e2e() {
+        let repo = init_repo("status-stage-commit");
+
+        fs::write(format!("{repo}/tracked.txt"), "hello\n").unwrap();
+        run(&repo, &["add", "tracked.txt"]).unwrap();
+        run(&repo, &["commit", "-q", "-m", "initial"]).unwrap();
+
+        fs::write(format!("{repo}/tracked.txt"), "hello world\n").unwrap();
+        fs::write(format!("{repo}/untracked.txt"), "new\n").unwrap();
+
+        let s = status(&repo).unwrap();
+        assert_eq!(s.unstaged.len(), 1);
+        assert_eq!(s.unstaged[0].path, "tracked.txt");
+        assert_eq!(s.untracked.len(), 1);
+        assert_eq!(s.untracked[0].path, "untracked.txt");
+        assert!(s.staged.is_empty());
+        assert!(s.branch.is_some());
+
+        stage(&repo, &["tracked.txt".to_string(), "untracked.txt".to_string()]).unwrap();
+        let s = status(&repo).unwrap();
+        assert_eq!(s.staged.len(), 2);
+        assert!(s.unstaged.is_empty());
+        assert!(s.untracked.is_empty());
+
+        unstage(&repo, &["untracked.txt".to_string()]).unwrap();
+        let s = status(&repo).unwrap();
+        assert_eq!(s.staged.len(), 1);
+        assert_eq!(s.untracked.len(), 1);
+
+        commit(&repo, "second commit").unwrap();
+        let s = status(&repo).unwrap();
+        assert_eq!(s.staged.len(), 0);
+        assert_eq!(s.untracked.len(), 1);
+
+        let d = diff(&repo, "untracked.txt", false, true).unwrap();
+        assert!(d.contains("new"));
+
+        let _ = fs::remove_dir_all(&repo);
+    }
+}
