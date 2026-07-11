@@ -16,6 +16,15 @@ html, body, #root {
   height: 100%;
 }
 
+.vire-activity-dot {
+  animation: vire-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vire-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 /* inline styles can't express :hover — these are the only hover/focus rules in the app */
 .vire-block:hover {
   box-shadow: var(--shadow-block-hover);

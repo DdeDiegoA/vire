@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { useVireStore, type VireBlock } from '../store/useVireStore'
+import { useActivityStore } from '../store/useActivityStore'
 import { PomodoroBlock } from '../shapes/blocks/PomodoroBlock'
 import type { PomodoroData } from '../shapes/blockTypes'
 import { TaskListBlock } from '../shapes/blocks/TaskListBlock'
@@ -38,6 +39,7 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
   const updateBlock = useVireStore((s) => s.updateBlock)
   const removeBlock = useVireStore((s) => s.removeBlock)
   const isSelected = selectedBlockId === block.id
+  const activityStatus = useActivityStore((s) => s.byBlock[block.id]?.status)
 
   const select = () => {
     selectBlock(block.id)
@@ -160,6 +162,13 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
           })()}
         </div>
         <span style={{ flex: 1 }}>{block.title}</span>
+        {activityStatus === 'working' && (
+          <span
+            className="vire-activity-dot"
+            title="Trabajando"
+            style={{ width: 6, height: 6, borderRadius: '50%', background: '#e5a94e', flexShrink: 0 }}
+          />
+        )}
         <button
           type="button"
           className="block-close"

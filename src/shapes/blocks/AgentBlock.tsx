@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { useVireStore } from '../../store/useVireStore'
+import { useActivityStore } from '../../store/useActivityStore'
+import { notifyAgentDone } from '../../store/notify'
 import type { AgentData } from '../blockTypes'
 
 type Entry =
@@ -54,6 +56,9 @@ function EventCard({ raw }: { raw: unknown }) {
 export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
   const updateBlockData = useVireStore((s) => s.updateBlockData)
   const repoPath = useVireStore((s) => s.projects.find((p) => p.id === s.activeId)?.repoPath)
+  const projectId = useVireStore((s) => s.activeId)
+  const ownerId = useVireStore((s) => s.activeWorktreeId[s.activeId] ?? s.activeId)
+  const markActivity = useActivityStore((s) => s.markActivity)
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
   const [running, setRunning] = useState(false)
@@ -64,6 +69,8 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
     setPrompt('')
     setEntries((e) => [...e, { kind: 'prompt', text }])
     setRunning(true)
+    const agentTitle = `Agente (${data.cli})`
+    markActivity(id, projectId, ownerId, 'agent', agentTitle, 'working', useVireStore.getState().activeId)
 
     const channel = new Channel<{ kind: 'Line'; raw: unknown } | { kind: 'Done'; error: string | null }>()
     channel.onmessage = (msg) => {
@@ -74,6 +81,8 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
       } else {
         setRunning(false)
         if (msg.error) setEntries((e) => [...e, { kind: 'error', text: msg.error! }])
+        markActivity(id, projectId, ownerId, 'agent', agentTitle, 'done', useVireStore.getState().activeId)
+        if (!msg.error) void notifyAgentDone('Agente terminado', agentTitle)
       }
     }
 

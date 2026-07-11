@@ -40,6 +40,7 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const [termType, setTermType] = useState('auto')
   const [shellPath, setShellPath] = useState('auto')
   const [shells, setShells] = useState<string[]>([])
+  const [notifyOnlyUnfocused, setNotifyOnlyUnfocused] = useState(true)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -63,6 +64,8 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
       if (!cancelled && shellCfg) setShellPath(shellCfg)
       const shellList = await invoke<string[]>('list_shells')
       if (!cancelled) setShells(shellList)
+      const notifyCfg = await invoke<string | null>('get_config', { key: 'notifications:onlyUnfocused' })
+      if (!cancelled && notifyCfg !== null) setNotifyOnlyUnfocused(notifyCfg === 'true')
     })()
     return () => {
       cancelled = true
@@ -83,6 +86,11 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
   const saveShellPath = (value: string) => {
     setShellPath(value)
     invoke('set_config', { key: 'terminal:shell', valueJson: value })
+  }
+
+  const saveNotifyOnlyUnfocused = (value: boolean) => {
+    setNotifyOnlyUnfocused(value)
+    invoke('set_config', { key: 'notifications:onlyUnfocused', valueJson: String(value) })
   }
 
   return (
@@ -186,6 +194,16 @@ export function SettingsPanel({ onClose }: { onClose: () => void }) {
             </option>
           ))}
         </select>
+      </div>
+      <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--glass-block-border)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--color-text-secondary)', fontSize: 'clamp(11px, 3cqw, 13px)', cursor: 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={notifyOnlyUnfocused}
+            onChange={(e) => saveNotifyOnlyUnfocused(e.target.checked)}
+          />
+          Notificar solo cuando la ventana no tiene foco
+        </label>
       </div>
     </dialog>
   )

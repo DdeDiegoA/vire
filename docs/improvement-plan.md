@@ -74,6 +74,13 @@ clonar Orca sino portar sus primitivas de orquestación al modelo canvas.
 - Notificaciones nativas OS via `tauri-plugin-notification` (click → enfoca proyecto+bloque).
 - Panel "inbox": lista cronológica de eventos (agente X terminó en worktree Y) con marcar-leído.
 
+**Estado (2026-07-11), implementado en Fase 8:** solo `working`/`done`/`idle` (derivados 100%
+en frontend del byte-stream de terminal y de los eventos `Line`/`Done` del agente, sin nueva
+primitiva en `ProcessManager`). `awaiting input` queda deliberadamente fuera — sin un protocolo
+estructurado del lado del agente, distinguir "esperando input" de "output lento" en una PTY
+genérica es frágil (falsos positivos/negativos). Se agrega cuando los agentes expongan un
+stream estructurado (tool-use/waiting-for-permission), tal como ya prevé el punto anterior.
+
 ### 3.3 Terminal: tabs + búsqueda + scrollback persistente
 - Tabs dentro del bloque Terminal (N sesiones PTY por bloque, header con tabs). Splits NO —
   el canvas ya lo resuelve; documentar ese patrón.

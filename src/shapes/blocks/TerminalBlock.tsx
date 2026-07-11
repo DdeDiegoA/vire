@@ -4,7 +4,10 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
 import { useVireStore } from '../../store/useVireStore'
+import { useActivityStore } from '../../store/useActivityStore'
 import type { TerminalData } from '../blockTypes'
+
+const IDLE_AFTER_MS = 1500
 
 const THEME = {
   background: '#141414',
@@ -15,6 +18,8 @@ const THEME = {
 export function TerminalBlock({ id, data }: { id: string; zoom: number; data: TerminalData }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const projectId = useVireStore((s) => s.activeId)
+  const ownerId = useVireStore((s) => s.activeWorktreeId[s.activeId] ?? s.activeId)
+  const markActivity = useActivityStore((s) => s.markActivity)
   const cwdOverride = data.cwd
 
   useEffect(() => {
@@ -31,8 +36,16 @@ export function TerminalBlock({ id, data }: { id: string; zoom: number; data: Te
     term.loadAddon(fitAddon)
     term.open(container)
 
+    let idleTimer: ReturnType<typeof setTimeout> | null = null
     const channel = new Channel<number[]>()
-    channel.onmessage = (bytes) => term.write(new Uint8Array(bytes))
+    channel.onmessage = (bytes) => {
+      term.write(new Uint8Array(bytes))
+      markActivity(id, projectId, ownerId, 'terminal', 'Terminal', 'working', useVireStore.getState().activeId)
+      if (idleTimer) clearTimeout(idleTimer)
+      idleTimer = setTimeout(() => {
+        markActivity(id, projectId, ownerId, 'terminal', 'Terminal', 'idle', useVireStore.getState().activeId)
+      }, IDLE_AFTER_MS)
+    }
 
     let created = false
     let size = { cols: term.cols, rows: term.rows }
@@ -75,9 +88,10 @@ export function TerminalBlock({ id, data }: { id: string; zoom: number; data: Te
       observer.disconnect()
       dataDisposable.dispose()
       if (resizeTimer) clearTimeout(resizeTimer)
+      if (idleTimer) clearTimeout(idleTimer)
       term.dispose()
     }
-  }, [id, projectId, cwdOverride])
+  }, [id, projectId, ownerId, cwdOverride, markActivity])
 
   return (
     <div
