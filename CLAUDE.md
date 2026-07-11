@@ -3,6 +3,24 @@
 Lee `docs/context.md` antes de cualquier cambio — ahí están arquitectura, decisiones de diseño, tokens, IPC, y findings técnicos.
 No modifiques `docs/context.md` — es un snapshot del vault de Obsidian, los cambios de diseño se discuten ahí.
 
+## npm / lockfile — Node version pitfall (recurrente)
+
+Este repo fija `engines.node >= 24.18.0` en `package.json` y `.nvmrc = 24.18.0` — CI usa esa
+versión exacta. Si corres `npm install <pkg>` o `npm install --package-lock-only` con **otra**
+versión de Node activa (p. ej. 24.11.1 vía fnm/nvm), npm resuelve las dependencias opcionales
+de WASM (`@emnapi/core`, `@emnapi/runtime`, usadas por `@napi-rs/wasm-runtime` y
+`@rolldown/binding-wasm32-wasi`) de forma distinta y puede **eliminar sus entradas top-level**
+del lockfile. El síntoma en CI es `npm ci` fallando con `EUSAGE` ("`npm ci` can only install
+packages when your package.json and package-lock.json ... are in sync") — ya pasó dos veces
+(commits `8447b8a`, `9158f3d`, y de nuevo tras agregar `@tauri-apps/plugin-notification`).
+
+**Antes de cualquier `npm install`/`npm install --package-lock-only` en este repo:**
+```
+fnm use 24.18.0   # o: nvm use 24.18.0 — debe imprimir v24.18.0
+```
+y verificar después con `rm -rf node_modules && npm ci` (limpio, sin warnings de EUSAGE) antes
+de dar el cambio por terminado. `npm ci --dry-run` NO detecta este problema de forma confiable.
+
 ## graphify
 
 Este proyecto tiene un grafo de conocimiento en `graphify-out/` (grafo del código: nodos, comunidades, relaciones cross-file).
