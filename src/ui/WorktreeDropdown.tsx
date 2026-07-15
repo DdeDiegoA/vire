@@ -49,7 +49,7 @@ export function WorktreeDropdown({ projectId, onClose }: { projectId: string; on
       addWorktree(worktree)
       setActiveWorktree(projectId, worktree.id)
       if (withAgent) {
-        addBlock('terminal', 40, 40, { cwd: worktree.path })
+        addBlock('terminal', 40, 40, { tabs: [{ id: 'main', cwd: worktree.path }], activeTabId: 'main' })
         addBlock('agent', 400, 40, { cli: 'claude', cwd: worktree.path })
       }
       setCreating(false)

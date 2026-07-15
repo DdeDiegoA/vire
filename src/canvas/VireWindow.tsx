@@ -94,7 +94,12 @@ export function VireWindow({ block, zoom }: { block: VireBlock; zoom: number }) 
   }
 
   const closeBlock = () => {
-    if (block.type === 'terminal') invoke('close_terminal', { surfaceId: block.id }).catch(() => {})
+    if (block.type === 'terminal') {
+      const tabs = (block.data as TerminalData).tabs
+      for (const tab of tabs) {
+        invoke('close_terminal', { surfaceId: `${block.id}:${tab.id}` }).catch(() => {})
+      }
+    }
     removeBlock(block.id)
   }
 

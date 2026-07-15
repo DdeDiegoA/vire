@@ -18,6 +18,7 @@ pub fn run() {
       ipc::terminal_input,
       ipc::resize_terminal,
       ipc::close_terminal,
+      ipc::get_terminal_scrollback,
       ipc::list_shells,
       ipc::list_projects,
       ipc::upsert_project,
@@ -80,7 +81,12 @@ pub fn run() {
             }
           }
           "quit" => {
-            app.state::<process::ProcessManager>().kill_all();
+            let process_manager = app.state::<process::ProcessManager>();
+            let project_manager = app.state::<project::ProjectManager>();
+            for (surface_id, bytes) in process_manager.snapshot_all() {
+              let _ = project_manager.save_scrollback(&surface_id, &bytes);
+            }
+            process_manager.kill_all();
             app.exit(0);
           }
           _ => {}

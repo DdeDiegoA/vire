@@ -10,8 +10,14 @@ export interface AgentData {
   cwd?: string
 }
 
-export interface TerminalData {
+export interface TerminalTab {
+  id: string
   cwd?: string
+}
+
+export interface TerminalData {
+  tabs: TerminalTab[]
+  activeTabId: string
 }
 
 export interface PomodoroData {
@@ -71,7 +77,7 @@ export const defaultAgentData: AgentData = { cli: 'claude' }
 
 export const defaultSourceControlData: SourceControlData = {}
 
-export const defaultTerminalData: TerminalData = {}
+export const defaultTerminalData: TerminalData = { tabs: [{ id: 'main' }], activeTabId: 'main' }
 
 export const defaultDataByType: Record<VireBlockType, unknown> = {
   pomodoro: defaultPomodoroData,

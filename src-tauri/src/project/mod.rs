@@ -73,6 +73,7 @@ impl ProjectManager {
         // error when the column is already there (no schema-version table
         // to check against instead).
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN repo_path TEXT", []);
+        let _ = conn.execute("ALTER TABLE terminals ADD COLUMN scrollback BLOB", []);
         Ok(Self { conn: Mutex::new(conn) })
     }
 
@@ -234,5 +235,25 @@ impl ProjectManager {
         conn.execute("DELETE FROM terminals WHERE id = ?1", params![id])
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    // Only ever called against rows that already exist (a terminal's scrollback
+    // is saved right before quit, for sessions the user has actually opened) —
+    // no upsert needed, unlike insert_terminal.
+    pub fn save_scrollback(&self, id: &str, bytes: &[u8]) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("UPDATE terminals SET scrollback = ?2 WHERE id = ?1", params![id, bytes])
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn get_scrollback(&self, id: &str) -> Result<Option<Vec<u8>>, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT scrollback FROM terminals WHERE id = ?1", params![id], |row| {
+            row.get::<_, Option<Vec<u8>>>(0)
+        })
+        .optional()
+        .map_err(|e| e.to_string())
+        .map(|opt| opt.flatten())
     }
 }

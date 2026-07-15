@@ -73,6 +73,15 @@ pub fn close_terminal(process: State<ProcessManager>, project: State<ProjectMana
     project.delete_terminal(&surface_id)
 }
 
+// Scrollback persisted right before the last real quit (tray "Salir") — only
+// relevant when open_terminal is spawning a *fresh* PTY (no live session to
+// reattach to), so the frontend can replay history from a process that no
+// longer exists.
+#[tauri::command]
+pub fn get_terminal_scrollback(project: State<ProjectManager>, surface_id: String) -> Result<Option<Vec<u8>>, String> {
+    project.get_scrollback(&surface_id)
+}
+
 #[derive(serde::Serialize)]
 pub struct ProjectDto {
     pub id: String,

@@ -254,7 +254,7 @@ export const useVireStore = create<VireStore>()(
     }),
     {
       name: 'vire-boards',
-      version: 3,
+      version: 4,
       storage: createTauriStorage(),
       migrate: (persisted, version) => {
         const state = persisted as VireStore & { boardsByProject?: Record<string, Board> }
@@ -276,6 +276,16 @@ export const useVireStore = create<VireStore>()(
           delete state.boardsByProject
           state.worktreesByProject = state.worktreesByProject ?? {}
           state.activeWorktreeId = state.activeWorktreeId ?? {}
+        }
+        if (version < 4) {
+          for (const board of Object.values(state.boardsByOwner ?? {})) {
+            for (const block of board.blocks) {
+              if (block.type !== 'terminal') continue
+              const old = block.data as { cwd?: string; tabs?: unknown }
+              if (old.tabs) continue
+              block.data = { tabs: [{ id: 'main', cwd: old.cwd }], activeTabId: 'main' }
+            }
+          }
         }
         return state
       },

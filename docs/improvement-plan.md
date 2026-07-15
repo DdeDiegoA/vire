@@ -5,9 +5,12 @@
 > objetivo: *central hub / AI orchestrator para desarrolladores que usan coding agents,
 > multiplataforma (Mac/Windows/Linux)*.
 >
-> Estado Vire hoy (Fase 5 ✅): canvas infinito con 7 bloques (Terminal, Agent, Editor,
-> Pomodoro, TaskList, Browser, Note), Tauri v2 + Rust, vt100+portable-pty con sesiones
-> persistentes y reattach, SQLite (proyectos/boards/config/terminales), CI/CD en GitHub Actions.
+> Estado Vire hoy (Fases 0-8 ✅, 2026-07-11): canvas infinito con 8 bloques (Terminal,
+> Agent, Editor, Pomodoro, TaskList, Browser, Note, SourceControl), Tauri v2 + Rust, xterm.js
+> + portable-pty con login shell nativo, sesiones persistentes con reattach + ring buffer 256KB,
+> SQLite (proyectos/boards/worktrees/config/terminales), Git module (status/diff/stage/commit),
+> worktrees multi-board con N agentes paralelos aislados, badges unread + notificaciones OS,
+> CI/CD en GitHub Actions.
 
 ---
 
@@ -37,15 +40,15 @@
 ## 2. Análisis de gap (objetivo vs. Vire actual)
 
 | Feature objetivo | Vire hoy | Gap |
-|---|---|---|
+|---|---|---|---|
 | Multi-proyecto simultáneo | Tabs de proyecto en topbar, 1 board por proyecto | Sin worktrees, sin estado git |
-| Git worktrees por tarea | ❌ | Crear/listar/borrar worktrees; board por worktree |
+| Git worktrees por tarea | ✅ Fase 7 | N worktrees = N boards aislados, auto-spawn agent |
 | Terminal multi-tab / splits | 1 PTY por bloque Terminal | Tabs dentro del bloque; "splits" ya existen como bloques múltiples en canvas |
-| Agentes aislados por tarea | Bloque Agent + terminales sueltos | Sin vínculo agente↔worktree, sin estado working/awaiting |
-| Notificaciones + unread | ❌ | Detección de actividad PTY/agente, badges en tabs y bloques |
+| Agentes aislados por tarea | ✅ Fase 7 + Fase 8 | Cwd=worktree, badges unread, notificaciones OS |
+| Notificaciones + unread | ✅ Fase 8 | working/done/idle, badge por proyecto, inbox, OS notify gated |
 | Editor integrado | Monaco mono-archivo | Sin file tree, sin multi-archivo |
 | Búsqueda | ❌ | Quick open (archivos + bloques + comandos) |
-| Source control tab | ❌ | Status/diff/stage/commit por proyecto/worktree |
+| Source control | ✅ Fase 6 | Status/diff/stage/commit con diff coloreado +/− |
 
 **Ventaja estructural de Vire sobre Orca:** el canvas infinito ya ES el "split infinito" —
 bloques heterogéneos (terminal, agente, editor, browser, notas) conviven espacialmente sin
@@ -54,14 +57,10 @@ clonar Orca sino portar sus primitivas de orquestación al modelo canvas.
 
 ## 3. Mejoras clave propuestas
 
-### 3.1 Worktrees como primitiva (el corazón de Orca)
-- Backend Rust: módulo `git/` con `git2` crate (o shell-out a `git` CLI — más simple, menos
-  binario) — comandos `list_worktrees`, `create_worktree(branch)`, `remove_worktree` con
-  preflight (cambios sin commitear → confirmar).
-- Modelo: `VireProject` gana `repo_path` opcional; un worktree = sub-entrada del proyecto con
-  su propio board. Topbar: tab de proyecto → dropdown/segunda fila de worktrees.
-- Al crear worktree: opción "abrir con agente" — spawna bloque Agent/Terminal con cwd en el
-  worktree y prompt inicial.
+### 3.1 Worktrees como primitiva — ✅ Implementado (Fase 7)
+- Backend Rust: `git/mod.rs` — `worktree_list`, `worktree_add`, `worktree_remove` (shell-out a git CLI, e2e test). SQLite: tabla `worktrees`, `boardsByOwner` keyed por project o worktree. IPC: `list_worktrees`, `create_worktree`, `remove_worktree`.
+- Modelo: `VireProject` con `repo_path`; un worktree = board independiente. Topbar: WorktreeDropdown con caret, new/switch/remove.
+- Al crear worktree: opción "abrir con agente" — spawna Agent + Terminal con `cwd=worktree.path`. Ver [[09-Worktrees]].
 
 ### 3.2 Estado de agente + notificaciones unread (estilo Gmail)
 - Primitiva binaria de Orca: `working` / `awaiting input` / `idle`. En Rust, ProcessManager ya
@@ -88,13 +87,10 @@ stream estructurado (tool-use/waiting-for-permission), tal como ya prevé el pun
   Rust (vt100 `screen().scrollback`) + persistir últimas N líneas en SQLite para reattach.
 - Búsqueda en terminal (Cmd+F dentro del bloque, sobre scrollback).
 
-### 3.4 Source control block/tab
-- Nuevo bloque `SourceControl`: status (staged/unstaged/untracked), diff viewer, stage por
-  archivo, commit con mensaje. Comandos Rust: `git_status`, `git_diff`, `git_stage`,
-  `git_commit` (shell-out).
-- V2 (patrón estrella de Orca): comentario inline en línea de diff → botón "enviar a agente"
-  que inyecta archivo+hunk+comentario como prompt al bloque Agent del mismo worktree.
-- Generación IA de mensaje de commit usando el CLI de agente ya configurado.
+### 3.4 Source control block — ✅ Implementado (Fase 6)
+- Bloque `SourceControl`: status (staged/unstaged/untracked), diff viewer coloreado +/−, stage/unstage por archivo, commit con mensaje + Cmd/Ctrl+Enter.
+- Comandos Rust: `git_status`, `git_diff`, `git_stage`, `git_commit` (shell-out). `repo_path` en proyecto SQLite.
+- V2 (patrón estrella de Orca): comentario inline en línea de diff → botón "enviar a agente" que inyecta archivo+hunk+comentario como prompt.
 
 ### 3.5 Editor: file tree + multi-archivo
 - Bloque Editor gana sidebar file-tree (read_dir recursivo lazy) + tabs de archivos abiertos.
@@ -118,9 +114,9 @@ stream estructurado (tool-use/waiting-for-permission), tal como ya prevé el pun
 
 | Fase | Contenido | Por qué este orden |
 |---|---|---|
-| **6 — Git core** | Módulo git en Rust, bloque SourceControl (status/diff/stage/commit), repo_path en proyecto | Base de todo lo demás; valor inmediato standalone |
-| **7 — Worktrees** | CRUD worktrees, board por worktree, UI en topbar, "abrir con agente" | Depende de 6; desbloquea paralelismo |
-| **8 — Estados + notificaciones** | working/awaiting/done en ProcessManager y Agent, badges unread, notificaciones OS, inbox | El diferenciador de orquestación; depende de nada de 6-7 pero brilla con worktrees |
+| **6 — Git core** ✅ | Módulo git en Rust, bloque SourceControl (status/diff/stage/commit), repo_path en proyecto | Base de todo lo demás; valor inmediato standalone |
+| **7 — Worktrees** ✅ | CRUD worktrees, board por worktree, WorktreeDropdown, "abrir con agente" | Depende de 6; desbloquea paralelismo |
+| **8 — Estados + notificaciones** ✅ | working/done/idle, badges unread, notificaciones OS, inbox | El diferenciador de orquestación; brilla con worktrees |
 | **9 — Terminal pro** | Tabs por bloque, scrollback persistente, búsqueda | Independiente; mejora diaria |
 | **10 — Editor + búsqueda** | File tree, multi-archivo, autosave, Cmd+K quick open | Independiente |
 | **11 — Loop review→agente** | Comentarios en diff → prompt a agente, commit-msg IA, fan-out multi-agente | Corona: requiere 6+7+8 |

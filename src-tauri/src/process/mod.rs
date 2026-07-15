@@ -186,6 +186,19 @@ impl ProcessManager {
             .map_err(|e| e.to_string())
     }
 
+    /// Snapshot of every live session's replay buffer, for persisting
+    /// scrollback to disk right before a real quit (tray "Salir") — the only
+    /// path that actually kills every PTY, so it's the only point where an
+    /// in-memory-only buffer would otherwise be lost for good.
+    pub fn snapshot_all(&self) -> Vec<(String, Vec<u8>)> {
+        self.map
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(id, handle)| (id.clone(), handle.replay_buffer.lock().unwrap().clone()))
+            .collect()
+    }
+
     pub fn close(&self, surface_id: &str) -> Result<(), String> {
         let mut map = self.map.lock().unwrap();
         if let Some(mut handle) = map.remove(surface_id) {
