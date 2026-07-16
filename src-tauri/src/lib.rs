@@ -39,6 +39,10 @@ pub fn run() {
       ipc::list_worktrees,
       ipc::create_worktree,
       ipc::remove_worktree,
+      ipc::search_scrollback,
+      fs_walk::list_dir,
+      fs_walk::walk_project_files,
+      fs_walk::file_mtime,
     ])
     // Closing the window hides it instead of quitting — terminal sessions
     // (live PTY in ProcessManager) keep running so reopening
@@ -122,3 +126,4 @@ pub mod agent;
 pub mod agent_resume;
 pub mod git;
 pub mod procscan;
+pub mod fs_walk;

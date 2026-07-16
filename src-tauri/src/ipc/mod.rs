@@ -97,6 +97,37 @@ pub fn get_terminal_scrollback(project: State<ProjectManager>, surface_id: Strin
 }
 
 #[derive(serde::Serialize)]
+pub struct ScrollbackHit {
+    pub surface_id: String,
+    pub line: String,
+}
+
+// Cmd+K "search terminal scrollback" source. Scrollback is raw PTY bytes
+// (text + ANSI escapes) — lossy UTF-8 decode is fine here since we're only
+// matching literal substrings, not rendering the escape codes.
+#[tauri::command]
+pub fn search_scrollback(project: State<ProjectManager>, project_id: String, query: String) -> Result<Vec<ScrollbackHit>, String> {
+    const LIMIT: usize = 20;
+    let needle = query.to_lowercase();
+    if needle.is_empty() {
+        return Ok(vec![]);
+    }
+    let mut hits = Vec::new();
+    'outer: for (surface_id, bytes) in project.scrollback_by_project(&project_id)? {
+        let text = String::from_utf8_lossy(&bytes);
+        for line in text.lines() {
+            if line.to_lowercase().contains(&needle) {
+                hits.push(ScrollbackHit { surface_id: surface_id.clone(), line: line.to_string() });
+                if hits.len() >= LIMIT {
+                    break 'outer;
+                }
+            }
+        }
+    }
+    Ok(hits)
+}
+
+#[derive(serde::Serialize)]
 pub struct ProjectDto {
     pub id: String,
     pub name: String,

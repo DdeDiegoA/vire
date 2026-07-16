@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
+import { Channel, invoke } from '@tauri-apps/api/core'
 import { open as openDirDialog } from '@tauri-apps/plugin-dialog'
 import { BranchUp, Plus, Minus } from 'reicon-react'
 import { useVireStore } from '../../store/useVireStore'
@@ -48,6 +48,10 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
   const [diff, setDiff] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [commentLine, setCommentLine] = useState<number | null>(null)
+  const [comment, setComment] = useState('')
+  const [drafting, setDrafting] = useState(false)
+  const addBlock = useVireStore((s) => s.addBlock)
 
   const refresh = async () => {
     if (!repoPath) return
@@ -66,6 +70,8 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
   }, [repoPath])
 
   useEffect(() => {
+    setCommentLine(null)
+    setComment('')
     if (!selectedFile || !repoPath) {
       setDiff('')
       return
@@ -116,6 +122,68 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
       refresh()
     } catch (err) {
       setError(String(err))
+    }
+  }
+
+  const sendCommentToAgent = (lineText: string) => {
+    if (!selectedFile || !repoPath || !comment.trim()) return
+    const prompt = `Archivo: ${selectedFile.path}\n\nDiff:\n${diff}\n\nComentario sobre la línea "${lineText.trim()}":\n${comment.trim()}`
+    addBlock('agent', 40, 40, { cli: 'claude', cwd: repoPath, initialPrompt: prompt })
+    setCommentLine(null)
+    setComment('')
+  }
+
+  const draftCommitMessage = async () => {
+    if (!repoPath || !status || drafting) return
+    const files = status.staged.length > 0 ? status.staged : status.unstaged
+    if (files.length === 0) return
+    setDrafting(true)
+    setError('')
+    try {
+      const diffs = await Promise.all(
+        files.map((f) =>
+          invoke<string>('git_diff', { repoPath, file: f.path, staged: status.staged.length > 0, untracked: false }).catch(() => ''),
+        ),
+      )
+      const prompt = `Escribe SOLO un mensaje de commit conciso (estilo conventional commits, una línea, sin comillas ni explicación) para este diff:\n\n${diffs.join('\n\n')}`
+      let text = ''
+      const channel = new Channel<{ kind: 'Line'; raw: unknown } | { kind: 'Done'; error: string | null }>()
+      const done = new Promise<void>((resolve) => {
+        channel.onmessage = (msg) => {
+          if (msg.kind === 'Line') {
+            const obj = msg.raw as Record<string, unknown>
+            const content = (obj?.message as Record<string, unknown> | undefined)?.content
+            if (Array.isArray(content)) {
+              text += content
+                .filter((c): c is { type: string; text: string } => (c as { type?: string })?.type === 'text')
+                .map((c) => c.text)
+                .join('')
+            }
+          } else {
+            resolve()
+          }
+        }
+      })
+      // ponytail: backend Done event is expected but not guaranteed (dropped channel, crashed CLI) — cap the wait so drafting never hangs
+      const timedOut = Symbol('timeout')
+      let timer: ReturnType<typeof setTimeout>
+      const timeout = new Promise<typeof timedOut>((resolve) => {
+        timer = setTimeout(() => resolve(timedOut), 30000)
+      })
+      await invoke('run_agent', { cli: 'claude', prompt, cwd: repoPath, sessionId: null, onEvent: channel })
+      const result = await Promise.race([done, timeout])
+      clearTimeout(timer!)
+      if (result === timedOut) {
+        setError('El agente no respondió a tiempo generando el mensaje de commit.')
+      } else if (text.trim()) {
+        setMessage(text.trim().replace(/^["'`]|["'`]$/g, '').split('\n')[0])
+      } else {
+        setError('El agente no devolvió texto para el mensaje de commit.')
+      }
+    } catch (err) {
+      setError(String(err))
+    } finally {
+      setDrafting(false)
     }
   }
 
@@ -269,11 +337,43 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
             }}
           >
             {diff.split('\n').map((line, i) => (
-              <div
-                key={i}
-                style={{ color: line.startsWith('+') ? 'var(--color-ok)' : line.startsWith('-') ? 'var(--color-err)' : '#999' }}
-              >
-                {line}
+              <div key={i}>
+                <div
+                  onClick={() => setCommentLine(commentLine === i ? null : i)}
+                  style={{
+                    color: line.startsWith('+') ? 'var(--color-ok)' : line.startsWith('-') ? 'var(--color-err)' : '#999',
+                    cursor: 'pointer',
+                    background: commentLine === i ? 'rgba(255, 255, 255, 0.06)' : 'none',
+                  }}
+                >
+                  {line}
+                </div>
+                {commentLine === i && (
+                  <div style={{ display: 'flex', gap: 4, padding: '3px 0 6px', whiteSpace: 'normal' }} onClick={(e) => e.stopPropagation()}>
+                    <input
+                      autoFocus
+                      className="v-focus-ring"
+                      aria-label="Comentario sobre esta línea"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && sendCommentToAgent(line)}
+                      placeholder="Comentario para el agente..."
+                      style={{
+                        flex: 1,
+                        background: 'rgba(0, 0, 0, 0.35)',
+                        border: '0.5px solid var(--glass-block-border)',
+                        borderRadius: 6,
+                        color: '#ccc',
+                        fontFamily: 'var(--font-ui)',
+                        fontSize: 'clamp(9px, 2.2cqw, 11px)',
+                        padding: '3px 6px',
+                      }}
+                    />
+                    <button type="button" className="v-focus-ring" onClick={() => sendCommentToAgent(line)} style={{ ...buttonStyle, padding: '3px 8px' }}>
+                      Enviar a agente
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </pre>
@@ -297,6 +397,9 @@ export function SourceControlBlock({ id: _id, data: _data }: { id: string; data:
             padding: '3px 6px',
           }}
         />
+        <button type="button" className="v-focus-ring" onClick={draftCommitMessage} disabled={drafting} title="Generar mensaje con IA" style={buttonStyle}>
+          {drafting ? '...' : 'IA'}
+        </button>
         <button type="button" className="v-focus-ring" onClick={commit} style={buttonStyle}>
           Commit
         </button>

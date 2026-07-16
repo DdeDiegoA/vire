@@ -254,7 +254,7 @@ export const useVireStore = create<VireStore>()(
     }),
     {
       name: 'vire-boards',
-      version: 4,
+      version: 5,
       storage: createTauriStorage(),
       migrate: (persisted, version) => {
         const state = persisted as VireStore & { boardsByProject?: Record<string, Board> }
@@ -284,6 +284,18 @@ export const useVireStore = create<VireStore>()(
               const old = block.data as { cwd?: string; tabs?: unknown }
               if (old.tabs) continue
               block.data = { tabs: [{ id: 'main', cwd: old.cwd }], activeTabId: 'main' }
+            }
+          }
+        }
+        if (version < 5) {
+          for (const board of Object.values(state.boardsByOwner ?? {})) {
+            for (const block of board.blocks) {
+              if (block.type !== 'editor') continue
+              const old = block.data as { path?: string; openPaths?: string[] }
+              if (old.openPaths) continue
+              const path = old.path ?? ''
+              const root = path ? path.slice(0, path.lastIndexOf('/')) || undefined : undefined
+              block.data = { root, openPaths: path ? [path] : [], activePath: path }
             }
           }
         }

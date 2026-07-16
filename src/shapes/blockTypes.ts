@@ -8,6 +8,7 @@ export interface AgentData {
   cli: 'claude' | 'opencode'
   sessionId?: string
   cwd?: string
+  initialPrompt?: string
 }
 
 export interface TerminalTab {
@@ -50,7 +51,9 @@ export interface BrowserData {
 }
 
 export interface EditorData {
-  path: string
+  root?: string
+  openPaths: string[]
+  activePath: string
 }
 
 export type SourceControlData = Record<string, never>
@@ -71,7 +74,7 @@ export const defaultNoteData: NoteData = { text: '', mode: 'edit' }
 
 export const defaultBrowserData: BrowserData = { history: [''], index: 0 }
 
-export const defaultEditorData: EditorData = { path: '' }
+export const defaultEditorData: EditorData = { openPaths: [], activePath: '' }
 
 export const defaultAgentData: AgentData = { cli: 'claude' }
 

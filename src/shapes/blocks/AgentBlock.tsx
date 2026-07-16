@@ -1,9 +1,17 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { useVireStore } from '../../store/useVireStore'
 import { useActivityStore } from '../../store/useActivityStore'
 import { notifyAgentDone } from '../../store/notify'
 import type { AgentData } from '../blockTypes'
+import type { Worktree } from '../../store/boardTypes'
+
+interface WorktreeDto {
+  id: string
+  project_id: string
+  path: string
+  branch: string
+}
 
 type Entry =
   | { kind: 'prompt'; text: string }
@@ -92,15 +100,19 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
   const repoPath = useVireStore((s) => s.projects.find((p) => p.id === s.activeId)?.repoPath)
   const projectId = useVireStore((s) => s.activeId)
   const ownerId = useVireStore((s) => s.activeWorktreeId[s.activeId] ?? s.activeId)
+  const addWorktree = useVireStore((s) => s.addWorktree)
+  const setActiveWorktree = useVireStore((s) => s.setActiveWorktree)
+  const addBlock = useVireStore((s) => s.addBlock)
   const markActivity = useActivityStore((s) => s.markActivity)
   const [prompt, setPrompt] = useState('')
   const [entries, setEntries] = useState<Entry[]>([])
   const [running, setRunning] = useState(false)
+  const [fanningOut, setFanningOut] = useState(false)
 
-  const send = async () => {
-    if (!prompt.trim() || running) return
-    const text = prompt
-    setPrompt('')
+  const send = async (override?: string) => {
+    const text = (override ?? prompt).trim()
+    if (!text || running) return
+    if (!override) setPrompt('')
     setEntries((e) => [...e, { kind: 'prompt', text }])
     setRunning(true)
     const agentTitle = `Agente (${data.cli})`
@@ -132,6 +144,46 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
     } catch (err) {
       setRunning(false)
       setEntries((e) => [...e, { kind: 'error', text: String(err) }])
+    }
+  }
+
+  useEffect(() => {
+    if (!data.initialPrompt) return
+    const p = data.initialPrompt
+    updateBlockData(id, { ...data, initialPrompt: undefined })
+    void send(p)
+    // ponytail: initialPrompt is a one-shot handoff (diff-comment/fan-out), not a live dep
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.initialPrompt])
+
+  const fanOut = async () => {
+    const text = prompt.trim()
+    if (!text || fanningOut) return
+    if (!projectId) {
+      setEntries((e) => [...e, { kind: 'error', text: 'No hay proyecto activo.' }])
+      return
+    }
+    const raw = window.prompt('¿A cuántos agentes en paralelo (worktrees) enviar este prompt?', '3')
+    const n = Math.min(8, Math.max(2, Number(raw) || 0))
+    if (!n) return
+    setFanningOut(true)
+    let created = 0
+    try {
+      for (let i = 1; i <= n; i++) {
+        const branch = `fanout/${id}-${Date.now()}-${i}`
+        const wt = await invoke<WorktreeDto>('create_worktree', { projectId, branch, base: null })
+        const worktree: Worktree = { id: wt.id, projectId: wt.project_id, path: wt.path, branch: wt.branch }
+        addWorktree(worktree)
+        setActiveWorktree(projectId, worktree.id)
+        addBlock('agent', 40 + i * 30, 40 + i * 30, { cli: data.cli, cwd: worktree.path, initialPrompt: text })
+        created++
+      }
+      setPrompt('')
+    } catch (err) {
+      // partial fan-out: keep the prompt so the user can see what was sent and retry the rest manually
+      setEntries((e) => [...e, { kind: 'error', text: `Fan-out: ${created}/${n} worktrees creados. ${String(err)}` }])
+    } finally {
+      setFanningOut(false)
     }
   }
 
@@ -220,7 +272,25 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
         <button
           type="button"
           className="v-focus-ring"
-          onClick={send}
+          onClick={fanOut}
+          disabled={running || fanningOut || !prompt.trim()}
+          title="Enviar este prompt a N agentes en paralelo, cada uno en su propio worktree"
+          style={{
+            background: 'rgba(255, 255, 255, 0.06)',
+            border: '0.5px solid var(--glass-block-border)',
+            borderRadius: 6,
+            color: '#aaa',
+            padding: '4px 11px',
+            fontSize: 'clamp(10px, 2.8cqw, 11px)',
+            cursor: fanningOut ? 'default' : 'pointer',
+          }}
+        >
+          {fanningOut ? '...' : 'Fan-out'}
+        </button>
+        <button
+          type="button"
+          className="v-focus-ring"
+          onClick={() => send()}
           disabled={running}
           style={{
             background: 'rgba(255, 255, 255, 0.06)',

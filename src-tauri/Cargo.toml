@@ -30,6 +30,7 @@ tauri-plugin-dialog = "2"
 tauri-plugin-notification = "2"
 portable-pty = "0.8"
 rusqlite = { version = "0.31", features = ["bundled"] }
+ignore = "0.4"
 # ponytail: portable-pty (wezterm's cross-OS PTY crate) instead of
 # alacritty_terminal — alacritty_terminal 0.24.2's bundled PTY layer
 # (rustix-openpty) has its own broken internal dependency resolution (two

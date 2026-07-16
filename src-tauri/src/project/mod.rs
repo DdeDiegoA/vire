@@ -258,6 +258,19 @@ impl ProjectManager {
         .map(|opt| opt.flatten())
     }
 
+    // Raw (surface_id, scrollback bytes) pairs for a project's terminals —
+    // the ipc layer does the lossy-decode + text search, this just fetches.
+    pub fn scrollback_by_project(&self, project_id: &str) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn
+            .prepare("SELECT id, scrollback FROM terminals WHERE project_id = ?1 AND scrollback IS NOT NULL")
+            .map_err(|e| e.to_string())?;
+        let rows = stmt
+            .query_map(params![project_id], |row| Ok((row.get::<_, String>(0)?, row.get::<_, Vec<u8>>(1)?)))
+            .map_err(|e| e.to_string())?;
+        rows.collect::<Result<Vec<_>, _>>().map_err(|e| e.to_string())
+    }
+
     pub fn get_terminal_cwd(&self, id: &str) -> Result<Option<String>, String> {
         let conn = self.conn.lock().unwrap();
         conn.query_row("SELECT cwd FROM terminals WHERE id = ?1", params![id], |row| row.get::<_, Option<String>>(0))
