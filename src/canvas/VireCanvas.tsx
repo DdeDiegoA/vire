@@ -171,7 +171,7 @@ export function VireCanvas() {
   }
 
   const onWheel: React.WheelEventHandler = (e) => {
-    if (!e.ctrlKey && isInsideScrollable(e.target as HTMLElement, e.currentTarget)) return
+    if (!e.ctrlKey && isInsideScrollable(e.target as HTMLElement, e.currentTarget as HTMLElement)) return
     e.preventDefault()
     if (e.ctrlKey) {
       const anim = zoomAnimRef.current
