@@ -19,6 +19,7 @@ pub fn run() {
       ipc::resize_terminal,
       ipc::close_terminal,
       ipc::get_terminal_scrollback,
+      ipc::terminal_ports,
       ipc::list_shells,
       ipc::list_projects,
       ipc::upsert_project,
@@ -83,6 +84,22 @@ pub fn run() {
           "quit" => {
             let process_manager = app.state::<process::ProcessManager>();
             let project_manager = app.state::<project::ProjectManager>();
+            // Before the PTYs die for real: if a terminal's foreground job is
+            // a known agent CLI, remember how to --resume it. Otherwise clear
+            // any stale resume from a previous quit so we don't wrongly
+            // retype it into an unrelated shell session later.
+            for surface_id in process_manager.live_ids() {
+              let comm = process_manager.foreground_pid(&surface_id).and_then(procscan::process_name);
+              let cwd = project_manager.get_terminal_cwd(&surface_id).ok().flatten();
+              let resume = match (&comm, &cwd) {
+                (Some(comm), Some(cwd)) => agent_resume::detect(comm, cwd),
+                _ => None,
+              };
+              match resume {
+                Some(cmd) => { let _ = project_manager.save_agent_resume(&surface_id, &cmd); }
+                None => { let _ = project_manager.clear_agent_resume(&surface_id); }
+              }
+            }
             for (surface_id, bytes) in process_manager.snapshot_all() {
               let _ = project_manager.save_scrollback(&surface_id, &bytes);
             }
@@ -102,4 +119,6 @@ pub mod process;
 pub mod project;
 pub mod ipc;
 pub mod agent;
+pub mod agent_resume;
 pub mod git;
+pub mod procscan;

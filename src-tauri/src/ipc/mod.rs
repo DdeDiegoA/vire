@@ -40,7 +40,21 @@ pub fn open_terminal(
     process.spawn(surface_id.clone(), cols, rows, term, shell.clone(), cwd.clone(), move |bytes| {
         let _ = on_data.send(bytes.to_vec());
     })?;
-    project.insert_terminal(&surface_id, &project_id, &surface_id, cwd.as_deref(), &shell)
+    project.insert_terminal(&surface_id, &project_id, &surface_id, cwd.as_deref(), &shell)?;
+
+    // A resume command left by a real app quit (see agent_resume) — type it
+    // into the fresh shell once, then forget it so a later quit-without-agent
+    // doesn't leave a stale resume for next time.
+    if let Some(cmd) = project.get_agent_resume(&surface_id)? {
+        let _ = process.input(&surface_id, format!("{cmd}\n").into_bytes());
+        project.clear_agent_resume(&surface_id)?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn terminal_ports(process: State<ProcessManager>, surface_id: String) -> Vec<u16> {
+    process.listening_ports(&surface_id)
 }
 
 #[tauri::command]

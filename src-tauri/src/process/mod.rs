@@ -142,6 +142,32 @@ impl ProcessManager {
         self.map.lock().unwrap().contains_key(surface_id)
     }
 
+    pub fn live_ids(&self) -> Vec<String> {
+        self.map.lock().unwrap().keys().cloned().collect()
+    }
+
+    /// Foreground process-group leader pid of the PTY (the job the shell is
+    /// currently running interactively) — Unix only, see procscan.
+    #[cfg(unix)]
+    pub fn foreground_pid(&self, surface_id: &str) -> Option<i32> {
+        self.map.lock().unwrap().get(surface_id)?.master.process_group_leader()
+    }
+
+    #[cfg(not(unix))]
+    pub fn foreground_pid(&self, _surface_id: &str) -> Option<i32> {
+        None
+    }
+
+    /// Listening TCP ports opened by this PTY's shell or any of its
+    /// descendant processes (e.g. a `npm run dev` spawned from it).
+    pub fn listening_ports(&self, surface_id: &str) -> Vec<u16> {
+        let root_pid = self.map.lock().unwrap().get(surface_id).and_then(|h| h.child.process_id());
+        match root_pid {
+            Some(pid) => crate::procscan::listening_ports(pid),
+            None => vec![],
+        }
+    }
+
     /// Reattaches a frontend to an already-running session: swaps the data
     /// subscriber in place (no new PTY/shell spawned) and replays the
     /// buffered scrollback so a fresh xterm.js instance can reconstruct

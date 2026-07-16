@@ -74,6 +74,7 @@ impl ProjectManager {
         // to check against instead).
         let _ = conn.execute("ALTER TABLE projects ADD COLUMN repo_path TEXT", []);
         let _ = conn.execute("ALTER TABLE terminals ADD COLUMN scrollback BLOB", []);
+        let _ = conn.execute("ALTER TABLE terminals ADD COLUMN agent_resume_cmd TEXT", []);
         Ok(Self { conn: Mutex::new(conn) })
     }
 
@@ -251,6 +252,42 @@ impl ProjectManager {
         let conn = self.conn.lock().unwrap();
         conn.query_row("SELECT scrollback FROM terminals WHERE id = ?1", params![id], |row| {
             row.get::<_, Option<Vec<u8>>>(0)
+        })
+        .optional()
+        .map_err(|e| e.to_string())
+        .map(|opt| opt.flatten())
+    }
+
+    pub fn get_terminal_cwd(&self, id: &str) -> Result<Option<String>, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT cwd FROM terminals WHERE id = ?1", params![id], |row| row.get::<_, Option<String>>(0))
+            .optional()
+            .map_err(|e| e.to_string())
+            .map(|opt| opt.flatten())
+    }
+
+    // Captured right before a real quit (tray "Salir") when the PTY's
+    // foreground job is a known agent CLI — see agent_resume::detect. Read
+    // back once, on the next open_terminal for this id, to retype the exact
+    // --resume command into the fresh shell.
+    pub fn save_agent_resume(&self, id: &str, cmd: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("UPDATE terminals SET agent_resume_cmd = ?2 WHERE id = ?1", params![id, cmd])
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn clear_agent_resume(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("UPDATE terminals SET agent_resume_cmd = NULL WHERE id = ?1", params![id])
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+
+    pub fn get_agent_resume(&self, id: &str) -> Result<Option<String>, String> {
+        let conn = self.conn.lock().unwrap();
+        conn.query_row("SELECT agent_resume_cmd FROM terminals WHERE id = ?1", params![id], |row| {
+            row.get::<_, Option<String>>(0)
         })
         .optional()
         .map_err(|e| e.to_string())

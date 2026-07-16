@@ -205,9 +205,11 @@ export function TerminalBlock({ id, data }: { id: string; zoom: number; data: Te
   const ownerId = useVireStore((s) => s.activeWorktreeId[s.activeId] ?? s.activeId)
   const markActivity = useActivityStore((s) => s.markActivity)
   const [gitStatus, setGitStatus] = useState<GitStatusDto | null>(null)
+  const [ports, setPorts] = useState<number[]>([])
 
   const tabs = data.tabs
   const activeTab: TerminalTab = tabs.find((t) => t.id === data.activeTabId) ?? tabs[0]
+  const activeSurfaceId = `${id}:${activeTab.id}`
 
   useEffect(() => {
     if (!activeTab.cwd) {
@@ -227,6 +229,21 @@ export function TerminalBlock({ id, data }: { id: string; zoom: number; data: Te
       clearInterval(interval)
     }
   }, [activeTab.cwd])
+
+  useEffect(() => {
+    let cancelled = false
+    const poll = () => {
+      invoke<number[]>('terminal_ports', { surfaceId: activeSurfaceId })
+        .then((p) => !cancelled && setPorts(p))
+        .catch(() => !cancelled && setPorts([]))
+    }
+    poll()
+    const interval = setInterval(poll, GIT_POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [activeSurfaceId])
 
   const addTab = () => {
     const newTab: TerminalTab = { id: crypto.randomUUID(), cwd: activeTab.cwd }
@@ -293,12 +310,35 @@ export function TerminalBlock({ id, data }: { id: string; zoom: number; data: Te
         >
           <Plus size={11} weight="Outline" />
         </button>
-        {gitStatus?.branch && (
-          <span style={{ marginLeft: 'auto', color: dirty ? '#e5a94e' : 'var(--color-text-muted)' }}>
-            {gitStatus.branch}
-            {dirty ? ' •' : ''}
-          </span>
-        )}
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+          {ports.map((port) => (
+            <button
+              key={port}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.open(`http://localhost:${port}`, '_blank')
+              }}
+              style={{
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: 'none',
+                borderRadius: 3,
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                fontSize: 10,
+                padding: '1px 5px',
+              }}
+            >
+              :{port}
+            </button>
+          ))}
+          {gitStatus?.branch && (
+            <span style={{ color: dirty ? '#e5a94e' : 'var(--color-text-muted)' }}>
+              {gitStatus.branch}
+              {dirty ? ' •' : ''}
+            </span>
+          )}
+        </span>
       </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <TerminalSession
