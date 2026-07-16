@@ -8,6 +8,22 @@ import type { VireBlockType } from '../shapes/blockTypes'
 const ZOOM_MIN = 0.2
 const ZOOM_MAX = 3
 
+// A wheel event over a block's own scrollable content (chat log, note body,
+// diff view...) should scroll that content, not pan the canvas — walk up
+// from the event target and bail out of panning if we find one that can
+// still scroll before hitting the canvas root.
+function isInsideScrollable(el: HTMLElement | null, root: HTMLElement | null): boolean {
+  let node = el
+  while (node && node !== root) {
+    const style = getComputedStyle(node)
+    if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return true
+    }
+    node = node.parentElement
+  }
+  return false
+}
+
 const MINIMAP_W = 180
 const MINIMAP_H = 120
 const MINIMAP_PAD = 60
@@ -155,6 +171,7 @@ export function VireCanvas() {
   }
 
   const onWheel: React.WheelEventHandler = (e) => {
+    if (!e.ctrlKey && isInsideScrollable(e.target as HTMLElement, e.currentTarget)) return
     e.preventDefault()
     if (e.ctrlKey) {
       const anim = zoomAnimRef.current

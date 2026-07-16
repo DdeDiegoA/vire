@@ -7,8 +7,42 @@ import type { AgentData } from '../blockTypes'
 
 type Entry =
   | { kind: 'prompt'; text: string }
+  | { kind: 'text'; text: string }
   | { kind: 'event'; raw: unknown }
   | { kind: 'error'; text: string }
+
+// CLI stream events carry a lot of scaffolding (step boundaries, tool-call
+// bookkeeping) alongside the actual reply text. step_start/step_finish are
+// pure noise for a chat reading experience — drop them. Text content shows
+// up in different shapes per CLI (opencode's {type:'text', part:{text}} vs
+// claude's {type:'assistant', message:{content:[{type:'text', text}]}}) —
+// normalize both into a plain chat bubble; anything else still falls back
+// to the raw event card so nothing is silently lost.
+function normalizeEvent(raw: unknown): Entry | null {
+  const obj = raw as Record<string, unknown>
+  const type = obj?.type
+
+  if (type === 'step_start' || type === 'step_finish') return null
+
+  if (type === 'text') {
+    const part = obj.part as Record<string, unknown> | undefined
+    const text = typeof part?.text === 'string' ? part.text : undefined
+    if (text) return { kind: 'text', text }
+  }
+
+  if (type === 'assistant') {
+    const content = (obj.message as Record<string, unknown> | undefined)?.content
+    if (Array.isArray(content)) {
+      const text = content
+        .filter((c): c is { type: string; text: string } => (c as { type?: string })?.type === 'text')
+        .map((c) => c.text)
+        .join('')
+      if (text) return { kind: 'text', text }
+    }
+  }
+
+  return { kind: 'event', raw }
+}
 
 function EventCard({ raw }: { raw: unknown }) {
   const obj = raw as Record<string, unknown>
@@ -75,7 +109,8 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
     const channel = new Channel<{ kind: 'Line'; raw: unknown } | { kind: 'Done'; error: string | null }>()
     channel.onmessage = (msg) => {
       if (msg.kind === 'Line') {
-        setEntries((e) => [...e, { kind: 'event', raw: msg.raw }])
+        const entry = normalizeEvent(msg.raw)
+        if (entry) setEntries((e) => [...e, entry])
         const sid = extractSessionId(msg.raw)
         if (sid && sid !== data.sessionId) updateBlockData(id, { ...data, sessionId: sid })
       } else {
@@ -142,6 +177,23 @@ export function AgentBlock({ id, data }: { id: string; data: AgentData }) {
           }
           if (entry.kind === 'error') {
             return <div key={key} style={{ color: 'var(--color-err)', fontSize: 'clamp(10px, 2.8cqw, 11px)', marginBottom: 8 }}>{entry.text}</div>
+          }
+          if (entry.kind === 'text') {
+            return (
+              <div
+                key={key}
+                style={{
+                  color: 'var(--color-text-secondary)',
+                  fontSize: 'clamp(11px, 3cqw, 12px)',
+                  lineHeight: 1.5,
+                  marginBottom: 8,
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {entry.text}
+              </div>
+            )
           }
           return <EventCard key={key} raw={entry.raw} />
         })}
