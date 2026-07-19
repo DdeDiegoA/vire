@@ -40,7 +40,7 @@ npm run build         # frontend build (tsc -b && vite build)
 npm run lint          # oxlint
 ```
 
-**Estado actual (Fase 5):** canvas funcional con 7 tipos de bloque — Terminal (vt100+portable-pty, sesiones persistentes con tray icon), Agent (chat con IA vía claude/opencode), Editor (Monaco), Pomodoro (timer circular con precisión de milisegundos), TaskList (con subtareas anidadas), Browser (webview embebido), y Nota (markdown con preview). Persistencia en SQLite vía ProjectManager (proyectos, bloques, layout de canvas, terminales). CI/release workflows en GitHub Actions.
+**Estado actual (Fase 11):** canvas infinito con 7 tipos de bloque — Terminal (vt100+portable-pty, sesiones persistentes con tray icon, multi-tab, search, agent resume), Agent (chat con IA vía invoke), Editor (Monaco), Pomodoro, TaskList, Browser, Nota. Persistencia SQLite (proyectos, bloques, layout, terminales, git state). Git integration (worktrees, multi-board isolation). Multi-agent orchestration. CI/CD con GitHub Actions.
 
 ## Estructura
 
@@ -73,12 +73,8 @@ vire/
 
 ## Fases
 
-- **Fase 0** ✅ — Scaffold Tauri + Vite + módulos Rust
-- **Fase 1** ✅ — Canvas custom (pan/zoom, bring-to-front), toolbar, topbar, grid, Pomodoro, TaskList
-- **Fase 2** ✅ — Terminal engine (vt100 + portable-pty, streaming via Channels, input handling)
-- **Fase 3** ✅ — Persistencia (SQLite, board snapshots, config CLIs)
-- **Fase 4** ✅ — CI/CD + Browser/Note blocks + terminal session persistence (tray + reattach)
-- **Fase 5** ✅ — Agent block, Monaco editor, pase visual glass + escalado responsive
+- **Fase 0-5** ✅ — Scaffold, canvas, terminal engine, persistencia, CI/CD, agent block, editor, glass design
+- **Fase 6-11** ✅ — Git integration (worktrees, multi-board), terminal multi-tab/search/resume, agent orchestration, bug fixes, audit verification
 
 ## Licencia
 
